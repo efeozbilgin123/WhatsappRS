@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "WhatsappRS",
+  "mainBinaryName": "WhatsappRS",
+  "version": "0.2.0",
+  "identifier": "com.efeozbilgin.whatsapprs",
+  "build": {
+    "frontendDist": "ui"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "efe",
+    "shortDescription": "WhatsApp Web için hafif masaüstü kabuğu",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "template": "windows/installer.nsi",
+        "languages": [
+          "Turkish",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJDNzIzMENBMzY5MjI0NkYKUldSdkpKSTJ5akJ5dkhRaFpSaHc2Q3EwVjNRM1A2bmRkelBSWmx3cUxMTXY3SlAzb1hkK1hOd1oK",
+      "endpoints": [
+        "https://github.com/efeozbilgin123/WhatsappRS/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
