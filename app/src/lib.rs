@@ -1,10 +1,12 @@
 //! WhatsappRS: WhatsApp Web için hafif Tauri kabuğu.
 
+mod autostart;
 mod commands;
 mod fatal;
 mod logging;
 mod notify;
 mod permissions;
+mod shortcuts;
 mod tray;
 mod window;
 
@@ -50,12 +52,15 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(autostart::plugin())
         .manage(state)
         .invoke_handler(tauri::generate_handler![commands::set_unread, commands::notify])
         .setup(move |app| {
             let handle = app.handle();
             tray::init(handle)?;
             window::create(handle, start_hidden)?;
+            shortcuts::init(handle);
             Ok(())
         })
         .run(tauri::generate_context!());

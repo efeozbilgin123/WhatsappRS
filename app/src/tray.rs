@@ -22,24 +22,42 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     let installed = app.state::<AppState>().installed;
     let toggle = MenuItem::with_id(app, "toggle", "Göster / Gizle", true, None::<&str>)?;
     let reload = MenuItem::with_id(app, "reload", "Yeniden yükle", true, None::<&str>)?;
-    let autostart = CheckMenuItem::with_id(app, AUTOSTART_ID, "Açılışta başlat", false, false, None::<&str>)?;
+    let autostart_on = crate::autostart::is_enabled(app);
+    let autostart = CheckMenuItem::with_id(app, AUTOSTART_ID, "Açılışta başlat", true, autostart_on, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
 
     let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart])?;
     if !installed {
-        let prepare = MenuItem::with_id(app, PREPARE_UNINSTALL_ID, "Kaldırmaya hazırla", false, None::<&str>)?;
+        let prepare = MenuItem::with_id(app, PREPARE_UNINSTALL_ID, "Kaldırmaya hazırla", true, None::<&str>)?;
         menu.append(&prepare)?;
     }
     menu.append_items(&[&sep2, &quit])?;
 
+    let autostart_item = autostart.clone();
     TrayIconBuilder::with_id(ID)
         .icon(icon_normal())
         .tooltip("WhatsappRS")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id().as_ref() {
+        .on_menu_event(move |app, event| match event.id().as_ref() {
+            AUTOSTART_ID => {
+                let want = !crate::autostart::is_enabled(app);
+                if let Err(e) = crate::autostart::set(app, want) {
+                    log::warn!("otomatik başlatma değiştirilemedi: {e}");
+                    crate::notify::info(app, "Açılışta başlatma ayarı değiştirilemedi.");
+                }
+                let _ = autostart_item.set_checked(crate::autostart::is_enabled(app));
+            }
+            PREPARE_UNINSTALL_ID => {
+                if let Err(e) = crate::autostart::set(app, false) {
+                    log::warn!("otomatik başlatma kaydı silinemedi: {e}");
+                }
+                crate::notify::info(app, "Otomatik başlatma kaydı silindi. Uygulamadan çıkıp klasörü silebilirsiniz.");
+                window::save_geometry(app);
+                app.exit(0);
+            }
             "toggle" => window::toggle(app),
             "reload" => {
                 if let Some(w) = app.get_webview_window(window::LABEL) {

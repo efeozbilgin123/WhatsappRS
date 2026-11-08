@@ -20,6 +20,24 @@ pub fn show(app: &AppHandle, id: u32, title: &str, body: &str) {
     }
 }
 
+/// Uygulamanın kendi bilgi mesajı (WhatsApp'tan gelmeyen).
+pub fn info(app: &AppHandle, text: &str) {
+    let installed = app.state::<AppState>().installed;
+    #[cfg(windows)]
+    {
+        use tauri_winrt_notification::Toast;
+        let app_id = if installed { APP_ID } else { Toast::POWERSHELL_APP_ID };
+        if let Err(e) = Toast::new(app_id).title("WhatsappRS").text1(text).show() {
+            log::warn!("bilgi bildirimi gösterilemedi: {e}");
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = installed;
+        log::info!("bilgi: {text}");
+    }
+}
+
 #[cfg(windows)]
 fn platform_show(app: AppHandle, installed: bool, id: u32, title: &str, body: &str) -> Result<(), String> {
     use tauri_winrt_notification::Toast;
