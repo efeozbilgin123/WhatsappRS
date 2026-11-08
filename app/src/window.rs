@@ -86,11 +86,14 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
             save_geometry(&ev_app);
             if let Some(w) = ev_app.get_webview_window(LABEL) {
                 let _ = w.hide();
+                crate::memory::set_low(&w, true);
             }
         }
     });
 
-    if !start_hidden {
+    if start_hidden {
+        crate::memory::set_low(&window, true);
+    } else {
         window.show()?;
         let _ = window.set_focus();
     }
@@ -159,6 +162,7 @@ fn open_external(app: &AppHandle, url: &str) {
 
 pub fn show(app: &AppHandle) {
     if let Some(w) = app.get_webview_window(LABEL) {
+        crate::memory::set_low(&w, false);
         let _ = w.show();
         let _ = w.unminimize();
         let _ = w.set_focus();
@@ -172,6 +176,7 @@ pub fn toggle(app: &AppHandle) {
         if visible && !minimized {
             save_geometry(app);
             let _ = w.hide();
+            crate::memory::set_low(&w, true);
         } else {
             show(app);
         }

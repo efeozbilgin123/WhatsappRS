@@ -5,6 +5,7 @@ mod commands;
 mod diag;
 mod fatal;
 mod logging;
+mod memory;
 mod notify;
 mod permissions;
 mod shortcuts;
