@@ -26,3 +26,4 @@ flexi_logger = "0.31"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation"] }
+tauri-winrt-notification = "0.8"
