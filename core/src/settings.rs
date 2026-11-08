@@ -16,11 +16,13 @@ pub struct Settings {
     pub webview_defaults: bool,
     /// true: bir sonraki açılışta WebView2 önbellekleri silinir (sonra kendiliğinden false olur).
     pub clear_cache_on_start: bool,
+    /// true: WebView2 süreçlerinden Windows güç kısıtlaması (EcoQoS) kaldırılır (deney).
+    pub high_performance: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false, webview_defaults: false, clear_cache_on_start: false }
+        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false, webview_defaults: false, clear_cache_on_start: false, high_performance: false }
     }
 }
 
@@ -129,7 +131,7 @@ mod tests {
     }
     #[test] fn roundtrip() {
         let p = tmp().join("settings.json");
-        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true, webview_defaults: true, clear_cache_on_start: false };
+        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true, webview_defaults: true, clear_cache_on_start: false, high_performance: false };
         save(&p, &s).unwrap();
         assert_eq!(load(&p), (s, None));
     }
@@ -184,6 +186,11 @@ mod tests {
         let p = tmp().join("settings.json");
         std::fs::write(&p, r#"{}"#).unwrap();
         assert!(!load(&p).0.clear_cache_on_start);
+    }
+    #[test] fn high_performance_defaults_off() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, r#"{}"#).unwrap();
+        assert!(!load(&p).0.high_performance);
     }
     #[test] fn compat_mode_defaults_off() {
         let p = tmp().join("settings.json");

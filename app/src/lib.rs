@@ -7,6 +7,7 @@ mod fatal;
 mod logging;
 mod memory;
 mod notify;
+mod perf;
 mod permissions;
 mod shortcuts;
 mod titlebar;
@@ -16,6 +17,7 @@ mod tray;
 mod window;
 
 use std::sync::Mutex;
+use tauri::Manager;
 use whatsapprs_core::paths::{is_installed, DataPaths};
 use whatsapprs_core::policy::show_on_second_instance;
 use whatsapprs_core::settings::{self, Settings};
@@ -75,6 +77,8 @@ pub fn run() {
             tray::init(handle)?;
             let main = window::create(handle, start_hidden)?;
             diag::start(&main);
+            let high_performance = handle.state::<AppState>().settings.lock().unwrap().high_performance;
+            perf::start(&main, high_performance);
             shortcuts::init(handle);
             update::start(handle);
             watchdog::start(handle);

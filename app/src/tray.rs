@@ -12,6 +12,7 @@ pub const COMPAT_ID: &str = "compat";
 pub const UPDATE_ID: &str = "update";
 pub const WV_DEFAULTS_ID: &str = "webview-defaults";
 pub const CLEAR_CACHE_ID: &str = "clear-cache";
+pub const HIGH_PERF_ID: &str = "high-performance";
 
 fn icon_normal() -> Image<'static> {
     Image::from_bytes(include_bytes!("../icons/tray.png")).expect("tepsi ikonu")
@@ -34,6 +35,8 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     let compat = CheckMenuItem::with_id(app, COMPAT_ID, "Uyumluluk modu (sorun giderme)", true, compat_on, None::<&str>)?;
     let wv_on = app.state::<AppState>().settings.lock().unwrap().webview_defaults;
     let wv_defaults = CheckMenuItem::with_id(app, WV_DEFAULTS_ID, "Deney: WebView2 varsayılan ayarları", true, wv_on, None::<&str>)?;
+    let hp_on = app.state::<AppState>().settings.lock().unwrap().high_performance;
+    let high_perf = CheckMenuItem::with_id(app, HIGH_PERF_ID, "Deney: yüksek performans", true, hp_on, None::<&str>)?;
     let clear_cache = MenuItem::with_id(app, CLEAR_CACHE_ID, "Önbelleği temizle (oturum korunur)", true, None::<&str>)?;
     let update = MenuItem::with_id(app, UPDATE_ID, "Güncellemeleri denetle", true, None::<&str>)?;
     app.manage(crate::update::UpdateMenuItem(update.clone()));
@@ -41,7 +44,7 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
 
-    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &compat, &wv_defaults, &clear_cache, &update, &sep2, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &compat, &wv_defaults, &high_perf, &clear_cache, &update, &sep2, &quit])?;
 
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id(ID)
@@ -62,6 +65,7 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
             // WebView2 başlatma bayrakları değişince eski WebView2 süreci kapanmadan yenisi açılamaz:
             // yeniden başlatmak yerine çıkılır, kullanıcı birkaç saniye sonra açar.
             WV_DEFAULTS_ID => toggle_setting(app, "WebView2 varsayılan ayarları", |s| &mut s.webview_defaults, false),
+            HIGH_PERF_ID => toggle_setting(app, "yüksek performans", |s| &mut s.high_performance, true),
             CLEAR_CACHE_ID => {
                 let state = app.state::<AppState>();
                 if let Err(e) = whatsapprs_core::settings::update(&state.paths.settings, |s| s.clear_cache_on_start = true) {
