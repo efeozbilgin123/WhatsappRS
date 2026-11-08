@@ -4,6 +4,7 @@ mod commands;
 mod fatal;
 mod logging;
 mod notify;
+mod permissions;
 mod tray;
 mod window;
 

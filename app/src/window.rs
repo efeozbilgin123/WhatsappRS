@@ -36,6 +36,7 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
         })
         .build()?;
 
+    crate::permissions::install(&window)?;
     restore_geometry(app, &window);
 
     let ev_app = app.clone();
