@@ -12,11 +12,13 @@ pub struct Settings {
     pub window: Option<WindowGeom>,
     /// true: WhatsApp sayfasına hiçbir betik eklenmez (sorun giderme için).
     pub compat_mode: bool,
+    /// true: WebView2, Tauri'nin ek başlatma bayrakları olmadan (kendi varsayılanlarıyla) açılır (deney).
+    pub webview_defaults: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false }
+        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false, webview_defaults: false }
     }
 }
 
@@ -125,7 +127,7 @@ mod tests {
     }
     #[test] fn roundtrip() {
         let p = tmp().join("settings.json");
-        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true };
+        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true, webview_defaults: true };
         save(&p, &s).unwrap();
         assert_eq!(load(&p), (s, None));
     }
@@ -168,6 +170,13 @@ mod tests {
         let (s, _) = load(&p);
         assert_eq!(s.shortcut, "Alt+Q");
         assert!(s.compat_mode);
+    }
+    #[test] fn webview_defaults_off_by_default() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, r#"{"shortcut":"Alt+Q"}"#).unwrap();
+        assert!(!load(&p).0.webview_defaults);
+        update(&p, |s| s.webview_defaults = true).unwrap();
+        assert!(load(&p).0.webview_defaults);
     }
     #[test] fn compat_mode_defaults_off() {
         let p = tmp().join("settings.json");

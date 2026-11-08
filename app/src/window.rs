@@ -17,13 +17,21 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
     let nav_app = app.clone();
     let new_app = app.clone();
 
-    let compat_mode = state.settings.lock().unwrap().compat_mode;
+    let (compat_mode, webview_defaults) = {
+        let s = state.settings.lock().unwrap();
+        (s.compat_mode, s.webview_defaults)
+    };
     if compat_mode {
         log::warn!("uyumluluk modu açık: sayfaya betik eklenmiyor (rozet ve bildirimler çalışmaz)");
     }
     let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url));
     if !compat_mode {
         builder = builder.initialization_script(include_str!("../inject/bridge.js"));
+    }
+    if webview_defaults {
+        // Tauri varsayılanı: --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection
+        log::warn!("deney: WebView2 ek başlatma bayrakları olmadan açılıyor");
+        builder = builder.additional_browser_args("");
     }
     let window = builder
         .title("WhatsappRS")

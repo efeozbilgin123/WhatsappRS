@@ -77,8 +77,8 @@ pub fn run() {
     if let Err(e) = result {
         log::error!("uygulama hatası: {e}");
         fatal::fatal(
-            "WhatsappRS başlatılamadı. Microsoft Edge WebView2 eksik olabilir: \
-             https://developer.microsoft.com/microsoft-edge/webview2 adresinden kurun.",
+            "WhatsappRS başlatılamadı. Birkaç saniye bekleyip yeniden açın. Sorun sürerse Microsoft Edge \
+             WebView2 eksik olabilir: https://developer.microsoft.com/microsoft-edge/webview2 adresinden kurun.",
         );
     }
 }

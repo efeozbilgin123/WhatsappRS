@@ -10,6 +10,7 @@ pub const ID: &str = "main";
 pub const AUTOSTART_ID: &str = "autostart";
 pub const COMPAT_ID: &str = "compat";
 pub const UPDATE_ID: &str = "update";
+pub const WV_DEFAULTS_ID: &str = "webview-defaults";
 
 fn icon_normal() -> Image<'static> {
     Image::from_bytes(include_bytes!("../icons/tray.png")).expect("tepsi ikonu")
@@ -38,13 +39,15 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     let autostart = CheckMenuItem::with_id(app, AUTOSTART_ID, "Açılışta başlat", true, autostart_on, None::<&str>)?;
     let compat_on = app.state::<AppState>().settings.lock().unwrap().compat_mode;
     let compat = CheckMenuItem::with_id(app, COMPAT_ID, "Uyumluluk modu (sorun giderme)", true, compat_on, None::<&str>)?;
+    let wv_on = app.state::<AppState>().settings.lock().unwrap().webview_defaults;
+    let wv_defaults = CheckMenuItem::with_id(app, WV_DEFAULTS_ID, "Deney: WebView2 varsayılan ayarları", true, wv_on, None::<&str>)?;
     let update = MenuItem::with_id(app, UPDATE_ID, "Güncellemeleri denetle", true, None::<&str>)?;
     app.manage(crate::update::UpdateMenuItem(update.clone()));
     let quit = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
 
-    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &compat, &update, &sep2, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &compat, &wv_defaults, &update, &sep2, &quit])?;
 
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id(ID)
@@ -61,21 +64,10 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
                 }
                 let _ = autostart_item.set_checked(crate::autostart::is_enabled(app));
             }
-            COMPAT_ID => {
-                let state = app.state::<AppState>();
-                let on = {
-                    let mut s = state.settings.lock().unwrap();
-                    s.compat_mode = !s.compat_mode;
-                    s.compat_mode
-                };
-                if let Err(e) = whatsapprs_core::settings::update(&state.paths.settings, |s| s.compat_mode = on) {
-                    log::warn!("uyumluluk modu kaydedilemedi: {e}");
-                    return;
-                }
-                log::info!("uyumluluk modu {} — yeniden başlatılıyor", if on { "açıldı" } else { "kapatıldı" });
-                window::save_geometry(app);
-                app.restart();
-            }
+            COMPAT_ID => toggle_setting(app, "uyumluluk modu", |s| &mut s.compat_mode, true),
+            // WebView2 başlatma bayrakları değişince eski WebView2 süreci kapanmadan yenisi açılamaz:
+            // yeniden başlatmak yerine çıkılır, kullanıcı birkaç saniye sonra açar.
+            WV_DEFAULTS_ID => toggle_setting(app, "WebView2 varsayılan ayarları", |s| &mut s.webview_defaults, false),
             UPDATE_ID => crate::update::on_menu_click(app),
             "toggle" => window::toggle(app),
             "reload" => {
@@ -96,6 +88,29 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
     Ok(())
+}
+
+/// Bir açık/kapalı ayarı değiştirir, kaydeder; sonra uygulamayı yeniden başlatır ya da kapatır.
+fn toggle_setting(app: &AppHandle, name: &str, field: fn(&mut whatsapprs_core::settings::Settings) -> &mut bool, restart: bool) {
+    let state = app.state::<AppState>();
+    let on = {
+        let mut s = state.settings.lock().unwrap();
+        let f = field(&mut s);
+        *f = !*f;
+        *f
+    };
+    if let Err(e) = whatsapprs_core::settings::update(&state.paths.settings, |s| *field(s) = on) {
+        log::warn!("{name} kaydedilemedi: {e}");
+        return;
+    }
+    log::info!("{name} {}", if on { "açıldı" } else { "kapatıldı" });
+    window::save_geometry(app);
+    if restart {
+        app.restart();
+    } else {
+        crate::notify::info(app, "Ayar kaydedildi. Uygulama kapanıyor; birkaç saniye sonra yeniden açın.");
+        app.exit(0);
+    }
 }
 
 pub fn update_unread(app: &AppHandle, count: u32) {
