@@ -21,6 +21,7 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
         .min_inner_size(600.0, 450.0)
         .visible(false)
         .data_directory(state.paths.webview.clone())
+        .initialization_script(include_str!("../inject/bridge.js"))
         .on_navigation(move |url| {
             if is_internal_url(url.as_str()) {
                 true

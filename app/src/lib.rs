@@ -1,5 +1,6 @@
 //! WhatsappRS: WhatsApp Web için hafif Tauri kabuğu.
 
+mod commands;
 mod fatal;
 mod logging;
 mod tray;
@@ -48,6 +49,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .manage(state)
+        .invoke_handler(tauri::generate_handler![commands::set_unread])
         .setup(move |app| {
             let handle = app.handle();
             tray::init(handle)?;
