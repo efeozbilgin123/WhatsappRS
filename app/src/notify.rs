@@ -20,6 +20,41 @@ pub fn show(app: &AppHandle, id: u32, title: &str, body: &str) {
     }
 }
 
+/// İndirme bitince bildirim; tıklanınca dosya klasöründe seçili açılır.
+pub fn download_finished(app: &AppHandle, path: Option<&std::path::Path>, success: bool) {
+    let Some(path) = path.filter(|_| success) else {
+        log::warn!("indirme başarısız veya iptal edildi");
+        info(app, "İndirme tamamlanamadı.");
+        return;
+    };
+    log::info!("indirildi: {}", path.display());
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    #[cfg(windows)]
+    {
+        use tauri_plugin_opener::OpenerExt;
+        use tauri_winrt_notification::Toast;
+        let installed = app.state::<AppState>().installed;
+        let app_id = if installed { APP_ID } else { Toast::POWERSHELL_APP_ID };
+        let (app2, path2) = (app.clone(), path.to_path_buf());
+        let r = Toast::new(app_id)
+            .title("İndirildi")
+            .text1(&name)
+            .text2("Göstermek için tıklayın")
+            .on_activated(move |_| {
+                if let Err(e) = app2.opener().reveal_item_in_dir(&path2) {
+                    log::warn!("klasör açılamadı: {e}");
+                }
+                Ok(())
+            })
+            .show();
+        if let Err(e) = r {
+            log::warn!("indirme bildirimi gösterilemedi: {e}");
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = name;
+}
+
 /// Uygulamanın kendi bilgi mesajı (WhatsApp'tan gelmeyen).
 pub fn info(app: &AppHandle, text: &str) {
     let installed = app.state::<AppState>().installed;

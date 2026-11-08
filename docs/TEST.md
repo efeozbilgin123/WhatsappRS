@@ -19,10 +19,18 @@ Her maddeyi deneyip kutuyu işaretle. Bir şey beklendiği gibi çalışmazsa
 - [ ] Pencereyi taşı/boyutlandır, Çıkış yap, tekrar aç → aynı yerde ve boyutta açılır.
 - [ ] Tepsi → "Yeniden yükle" → sayfa yenilenir.
 
+## Görünüm
+- [ ] Uygulama ilk açılışta koyu temada açılır (beyaz parlama yok).
+- [ ] Windows 11: başlık çubuğu WhatsApp'ın koyu rengiyle aynı (turuncu/vurgu rengi değil).
+- [ ] "Windows için WhatsApp'ı indirin" çubuğu görünmüyor.
+- [ ] `Ctrl` + `+` / `-` / `0` ile yakınlaştırma çalışır.
+
 ## Okunmamış rozeti
-- [ ] Pencere gizliyken başka bir telefondan mesaj gönder → tepsi simgesinde kırmızı nokta; üzerine gelince "WhatsappRS — 1 okunmamış".
-- [ ] Görev çubuğu simgesinde de kırmızı nokta görünür.
-- [ ] Mesajı oku → nokta kaybolur.
+- [ ] Pencere gizliyken başka bir telefondan mesaj gönder → tepsi simgesinde kırmızı rozet içinde sayı ("1"); üzerine gelince "WhatsappRS — 1 okunmamış".
+- [ ] 10+ okunmamışta rozet "9+" gösterir.
+- [ ] Görev çubuğu simgesinde de rozet görünür.
+- [ ] Mesajı oku → rozet kaybolur.
+- [ ] Pencere 10+ dakika tepsideyken gelen mesajda rozet birkaç saniye içinde güncellenir.
 
 ## Bildirimler
 - [ ] Pencere gizli/arka plandayken mesaj gelir → Windows bildirimi çıkar (başlık: kişi, metin: mesaj).
@@ -39,6 +47,15 @@ Her maddeyi deneyip kutuyu işaretle. Bir şey beklendiği gibi çalışmazsa
 ## Kısayol ve bağlantılar
 - [ ] Başka bir uygulamadayken `Ctrl+Alt+W` → WhatsappRS öne gelir; tekrar → gizlenir.
 - [ ] Sohbette bir web bağlantısına tıkla → varsayılan tarayıcında açılır (uygulamanın içinde değil).
+
+## Dosyalar
+- [ ] Bir dosyayı Gezgin'den sohbete sürükle-bırak → gönderme ekranı açılır.
+- [ ] Bir belge/fotoğraf indir → "İndirildi: dosya adı" bildirimi; tıklayınca İndirilenler klasöründe seçili açılır.
+- [ ] Bir sohbette "tümünü indir" gibi birden fazla dosya indir → hepsi iner.
+- [ ] Bir PDF'i önizlemede aç/kapat → çalışır.
+
+## Kasma karşılaştırması
+- [ ] Uzun bir sohbette yukarı kaydır ve PDF aç/kapat: aynı işlemi Edge'de web.whatsapp.com'da da dene. Sadece WhatsappRS'te kasıyorsa log dosyasıyla bildir.
 
 ## Açılışta başlatma
 - [ ] Tepsi → "Açılışta başlat" işaretle → bilgisayarı yeniden başlat → uygulama **gizli** (sadece tepside) açılır.

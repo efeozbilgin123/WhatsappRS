@@ -60,6 +60,32 @@
     };
   }
 
+  // "Windows için WhatsApp'ı indirin" çubuğunu gizle. WhatsApp'ın CSS sınıfları rastgele olduğundan
+  // metinden bulunur; çubuğun kendisi, metni içeren ve 100 px'den alçak en dış kapsayıcıdır.
+  const BANNER_TEXT = ["WhatsApp'ı indirin", "Download WhatsApp for Windows", "WhatsApp uygulamasını indirin"];
+  const xpath = "//span[" + BANNER_TEXT.map((t) => `contains(text(), "${t}")`).join(" or ") + "]";
+  const hideBanner = () => {
+    if (!document.body) return false;
+    const found = document.evaluate(xpath, document.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    for (let i = 0; i < found.snapshotLength; i++) {
+      let el = found.snapshotItem(i);
+      while (el.parentElement && el.parentElement !== document.body && el.parentElement.offsetHeight > 0 && el.parentElement.offsetHeight < 100) {
+        el = el.parentElement;
+      }
+      if (el.style.display !== "none") el.style.setProperty("display", "none", "important");
+    }
+    return found.snapshotLength > 0;
+  };
+  // Sayfa yüklenirken sık, sonra seyrek kontrol (uzun sohbetlerde performansı etkilemesin).
+  let checks = 0;
+  const bannerTimer = setInterval(() => {
+    hideBanner();
+    if (++checks === 60) {
+      clearInterval(bannerTimer);
+      setInterval(hideBanner, 30000);
+    }
+  }, 2000);
+
   window.__wrs = {
     click(id) {
       const n = store.get(id);

@@ -35,7 +35,7 @@ pub fn load(path: &Path) -> (Settings, Option<String>) {
     match serde_json::from_str(text.trim_start_matches('\u{feff}')) {
         Ok(s) => (s, None),
         Err(e) => {
-            let bak = path.with_extension("json.bak");
+            let bak = free_backup_path(path);
             let note = match std::fs::rename(path, &bak) {
                 Ok(()) => format!("Ayar dosyası bozuk ({e}); {} olarak saklandı, varsayılanlar kullanılıyor", bak.display()),
                 Err(re) => format!("Ayar dosyası bozuk ({e}) ve yedeklenemedi ({re}); varsayılanlar kullanılıyor"),
@@ -43,6 +43,21 @@ pub fn load(path: &Path) -> (Settings, Option<String>) {
             (Settings::default(), Some(note))
         }
     }
+}
+
+/// İlk boş yedek adı: settings.json.bak, .bak1 … .bak9 (hepsi doluysa .bak9'un üzerine yazılır).
+fn free_backup_path(path: &Path) -> std::path::PathBuf {
+    let first = path.with_extension("json.bak");
+    if !first.exists() {
+        return first;
+    }
+    for i in 1..=9 {
+        let p = path.with_extension(format!("json.bak{i}"));
+        if !p.exists() || i == 9 {
+            return p;
+        }
+    }
+    unreachable!()
 }
 
 /// Önce geçici dosyaya yazar, sonra yerine taşır; yarım dosya kalmaz.
@@ -151,6 +166,16 @@ mod tests {
         let (s, w) = load(&p);
         assert_eq!(s.shortcut, "Alt+Q");
         assert!(w.is_none());
+    }
+    #[test] fn repeated_corruption_keeps_old_backup() {
+        let d = tmp();
+        let p = d.join("settings.json");
+        std::fs::write(&p, "{bir").unwrap();
+        load(&p);
+        std::fs::write(&p, "{iki").unwrap();
+        load(&p);
+        assert_eq!(std::fs::read_to_string(d.join("settings.json.bak")).unwrap(), "{bir");
+        assert_eq!(std::fs::read_to_string(d.join("settings.json.bak1")).unwrap(), "{iki");
     }
     #[test] fn geom_visible() { assert!(geom_is_visible(&g(100, 100), &[MON])); }
     #[test] fn geom_offscreen_ignored() {

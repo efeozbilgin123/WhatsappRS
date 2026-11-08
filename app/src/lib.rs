@@ -7,6 +7,7 @@ mod logging;
 mod notify;
 mod permissions;
 mod shortcuts;
+mod titlebar;
 mod tray;
 mod window;
 

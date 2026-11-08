@@ -3,7 +3,7 @@
 pub const WHATSAPP_URL: &str = "https://web.whatsapp.com/";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PermKind { Microphone, Camera, Notifications, Other }
+pub enum PermKind { Microphone, Camera, Notifications, MultipleDownloads, Other }
 
 /// Yalnızca `https://web.whatsapp.com` (varsayılan port) mı?
 fn is_whatsapp(url: &str) -> bool {
@@ -16,7 +16,24 @@ fn is_whatsapp(url: &str) -> bool {
 /// Kamera/mikrofon izni yalnızca WhatsApp Web'e verilir. Bildirim izni verilmez:
 /// bildirimler bridge.js → Rust yolundan gider (aksi halde WebView2 kendi bildirimini de gösterir).
 pub fn allow_permission(origin: &str, kind: PermKind) -> bool {
-    matches!(kind, PermKind::Microphone | PermKind::Camera) && is_whatsapp(origin)
+    matches!(kind, PermKind::Microphone | PermKind::Camera | PermKind::MultipleDownloads) && is_whatsapp(origin)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NewWindowAction { OpenInApp, OpenExternal, Deny }
+
+/// WhatsApp'ın açmak istediği yeni pencere (PDF/medya önizleme, dış bağlantı) için karar.
+pub fn new_window_action(url: &str) -> NewWindowAction {
+    if let Some(inner) = url.strip_prefix("blob:") {
+        return if is_whatsapp(inner) { NewWindowAction::OpenInApp } else { NewWindowAction::Deny };
+    }
+    if is_whatsapp(url) {
+        return NewWindowAction::OpenInApp;
+    }
+    match url::Url::parse(url) {
+        Ok(u) if u.scheme() == "https" || u.scheme() == "http" => NewWindowAction::OpenExternal,
+        _ => NewWindowAction::Deny,
+    }
 }
 
 /// Otomatik başlatma kayıt değeri: boşluklu yollar için tırnaklı.
@@ -79,6 +96,20 @@ mod tests {
             autostart_command(r"C:\Users\Ali Veli\AppData\Local\Programs\WhatsappRS\WhatsappRS.exe"),
             r#""C:\Users\Ali Veli\AppData\Local\Programs\WhatsappRS\WhatsappRS.exe" --minimized"#
         );
+    }
+    #[test] fn perm_allows_multiple_downloads() {
+        assert!(allow_permission("https://web.whatsapp.com", PermKind::MultipleDownloads));
+        assert!(!allow_permission("https://evil.com", PermKind::MultipleDownloads));
+    }
+    #[test] fn new_window_actions() {
+        assert_eq!(new_window_action("blob:https://web.whatsapp.com/3f2a-11"), NewWindowAction::OpenInApp);
+        assert_eq!(new_window_action("https://web.whatsapp.com/"), NewWindowAction::OpenInApp);
+        assert_eq!(new_window_action("https://example.com/a"), NewWindowAction::OpenExternal);
+        assert_eq!(new_window_action("http://example.com/a"), NewWindowAction::OpenExternal);
+        assert_eq!(new_window_action("blob:https://evil.com/x"), NewWindowAction::Deny);
+        assert_eq!(new_window_action("javascript:alert(1)"), NewWindowAction::Deny);
+        assert_eq!(new_window_action("file:///C:/Windows/system32/calc.exe"), NewWindowAction::Deny);
+        assert_eq!(new_window_action("ms-settings:"), NewWindowAction::Deny);
     }
     #[test] fn second_instance_minimized() {
         assert!(!show_on_second_instance(&["WhatsappRS.exe".into(), "--minimized".into()]));

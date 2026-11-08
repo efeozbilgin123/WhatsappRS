@@ -1,10 +1,11 @@
 //! Ana pencere: WhatsApp Web'i yükler, kapatınca tepsiye gizlenir, konumunu hatırlar.
 
 use crate::AppState;
-use tauri::webview::NewWindowResponse;
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::webview::{DownloadEvent, NewWindowResponse};
+use tauri::window::Color;
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_opener::OpenerExt;
-use whatsapprs_core::policy::{is_internal_url, WHATSAPP_URL};
+use whatsapprs_core::policy::{is_internal_url, new_window_action, NewWindowAction, WHATSAPP_URL};
 use whatsapprs_core::settings::{self, geom_is_visible, Rect, WindowGeom};
 
 pub const LABEL: &str = "main";
@@ -22,21 +23,48 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
         .visible(false)
         .data_directory(state.paths.webview.clone())
         .initialization_script(include_str!("../inject/bridge.js"))
+        // Koyu tema: WhatsApp "sistem varsayılanı" temasında koyu açılır, açılışta beyaz parlama olmaz.
+        .theme(Some(Theme::Dark))
+        .background_color(Color(crate::titlebar::BACKGROUND.0, crate::titlebar::BACKGROUND.1, crate::titlebar::BACKGROUND.2, 255))
+        // Tauri'nin dosya sürükle-bırak yakalayıcısı kapalı: dosyalar sohbete sürüklenebilsin.
+        .disable_drag_drop_handler()
+        .zoom_hotkeys_enabled(true)
         .on_navigation(move |url| {
             if is_internal_url(url.as_str()) {
+                log::info!("gezinme: {url}");
                 true
             } else {
                 open_external(&nav_app, url.as_str());
                 false
             }
         })
-        .on_new_window(move |url, _features| {
-            open_external(&new_app, url.as_str());
-            NewWindowResponse::Deny
+        .on_new_window(move |url, _features| match new_window_action(url.as_str()) {
+            NewWindowAction::OpenInApp => NewWindowResponse::Allow,
+            NewWindowAction::OpenExternal => {
+                open_external(&new_app, url.as_str());
+                NewWindowResponse::Deny
+            }
+            NewWindowAction::Deny => {
+                log::warn!("yeni pencere reddedildi: {url}");
+                NewWindowResponse::Deny
+            }
+        })
+        .on_download(|webview, event| {
+            match event {
+                DownloadEvent::Requested { url, destination } => {
+                    log::info!("indirme başladı: {} -> {}", url.scheme(), destination.display());
+                }
+                DownloadEvent::Finished { path, success, .. } => {
+                    crate::notify::download_finished(webview.app_handle(), path.as_deref(), success);
+                }
+                _ => {}
+            }
+            true
         })
         .build()?;
 
     crate::permissions::install(&window)?;
+    crate::titlebar::apply(&window);
     restore_geometry(app, &window);
 
     let ev_app = app.clone();
@@ -118,7 +146,11 @@ pub fn save_geometry(app: &AppHandle) {
         // Büyütülmüşken normal boyutu bilinmez; yalnızca bayrağı güncelle.
         match s.window.as_mut() {
             Some(g) => g.maximized = true,
-            None => return,
+            None => {
+                // Hiç normal boyut kaydedilmemiş: geçerli boyutu bayrakla birlikte sakla.
+                let (Ok(pos), Ok(size)) = (w.outer_position(), w.inner_size()) else { return };
+                s.window = Some(WindowGeom { x: pos.x, y: pos.y, width: size.width, height: size.height, maximized: true });
+            }
         }
     } else {
         let (Ok(pos), Ok(size)) = (w.outer_position(), w.inner_size()) else { return };
