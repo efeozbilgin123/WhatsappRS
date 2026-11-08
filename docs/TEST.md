@@ -72,7 +72,7 @@ Her maddeyi deneyip kutuyu işaretle. Bir şey beklendiği gibi çalışmazsa
 ## Taşınabilir sürüm
 - [ ] `WhatsappRS-portable.zip`'i istediğin yere aç → `WhatsappRS\WhatsappRS.exe` çalışır, `data\` exe'nin yanında oluşur.
 - [ ] Bildirim gelir (tıklama sohbeti açmayabilir; bu sürümde bilinen sınır).
-- [ ] Tepsi → "Açılışta başlat" işaretle → tepsi → "Kaldırmaya hazırla" → uygulama kapanır; Run kaydı silinmiş; klasörü sil → iz kalmaz.
+- [ ] Tepsi → "Açılışta başlat" işaretle, sonra işareti kaldır → Run kaydı silinmiş; çık ve klasörü sil → iz kalmaz.
 
 ## Performans (isteğe bağlı)
 - [ ] Görev Yöneticisi'nde boşta RAM kullanımını resmi WhatsApp uygulamasıyla karşılaştır.

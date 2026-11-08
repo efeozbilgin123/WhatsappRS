@@ -44,7 +44,7 @@ Oturumu her zaman telefondan **Bağlı cihazlar** menüsünden kapatabilirsin.
 
 - **Kurulum sürümü:** Ayarlar → Uygulamalar → WhatsappRS → Kaldır. Verilerini saklayıp saklamamayı sorar.
   "Hayır" dersen hiçbir iz kalmaz (klasör, kısayollar, açılışta başlatma kaydı silinir).
-- **Taşınabilir sürüm:** tepsi menüsü → **Kaldırmaya hazırla** (açılışta başlatma kaydını siler), sonra klasörü sil.
+- **Taşınabilir sürüm:** "Açılışta başlat" açıksa önce tepsi menüsünden kapat (Windows kaydını siler), sonra klasörü sil.
 
 ## Ayarlar
 

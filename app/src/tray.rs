@@ -1,6 +1,6 @@
 //! Sistem tepsisi simgesi, menüsü ve okunmamış rozeti.
 
-use crate::{window, AppState};
+use crate::window;
 use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -8,7 +8,6 @@ use tauri::{AppHandle, Manager};
 
 pub const ID: &str = "main";
 pub const AUTOSTART_ID: &str = "autostart";
-pub const PREPARE_UNINSTALL_ID: &str = "prepare-uninstall";
 
 fn icon_normal() -> Image<'static> {
     Image::from_bytes(include_bytes!("../icons/tray.png")).expect("tepsi ikonu")
@@ -31,7 +30,6 @@ fn icon_badge(label: &str) -> Image<'static> {
 }
 
 pub fn init(app: &AppHandle) -> tauri::Result<()> {
-    let installed = app.state::<AppState>().installed;
     let toggle = MenuItem::with_id(app, "toggle", "Göster / Gizle", true, None::<&str>)?;
     let reload = MenuItem::with_id(app, "reload", "Yeniden yükle", true, None::<&str>)?;
     let autostart_on = crate::autostart::is_enabled(app);
@@ -40,12 +38,7 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
 
-    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart])?;
-    if !installed {
-        let prepare = MenuItem::with_id(app, PREPARE_UNINSTALL_ID, "Kaldırmaya hazırla", true, None::<&str>)?;
-        menu.append(&prepare)?;
-    }
-    menu.append_items(&[&sep2, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &sep2, &quit])?;
 
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id(ID)
@@ -61,14 +54,6 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
                     crate::notify::info(app, "Açılışta başlatma ayarı değiştirilemedi.");
                 }
                 let _ = autostart_item.set_checked(crate::autostart::is_enabled(app));
-            }
-            PREPARE_UNINSTALL_ID => {
-                if let Err(e) = crate::autostart::set(app, false) {
-                    log::warn!("otomatik başlatma kaydı silinemedi: {e}");
-                }
-                crate::notify::info(app, "Otomatik başlatma kaydı silindi. Uygulamadan çıkıp klasörü silebilirsiniz.");
-                window::save_geometry(app);
-                app.exit(0);
             }
             "toggle" => window::toggle(app),
             "reload" => {
