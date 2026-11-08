@@ -2,6 +2,7 @@
 
 mod autostart;
 mod commands;
+mod diag;
 mod fatal;
 mod logging;
 mod notify;
@@ -63,7 +64,8 @@ pub fn run() {
         .setup(move |app| {
             let handle = app.handle();
             tray::init(handle)?;
-            window::create(handle, start_hidden)?;
+            let main = window::create(handle, start_hidden)?;
+            diag::start(&main);
             shortcuts::init(handle);
             update::start(handle);
             watchdog::start(handle);
