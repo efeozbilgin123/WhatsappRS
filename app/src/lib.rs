@@ -38,9 +38,17 @@ pub fn run() {
     logging::init(&paths.logs);
     log::info!("WhatsappRS {} başlıyor ({})", env!("CARGO_PKG_VERSION"), exe_dir.display());
 
-    let (loaded, warning) = settings::load(&paths.settings);
+    let (mut loaded, warning) = settings::load(&paths.settings);
     if let Some(w) = warning {
         log::warn!("{w}");
+    }
+    if loaded.clear_cache_on_start {
+        let removed = whatsapprs_core::paths::clear_webview_cache(&paths.webview);
+        log::info!("önbellek temizlendi ({removed} klasör)");
+        loaded.clear_cache_on_start = false;
+        if let Err(e) = settings::update(&paths.settings, |s| s.clear_cache_on_start = false) {
+            log::warn!("önbellek işareti sıfırlanamadı: {e}");
+        }
     }
     let start_hidden = std::env::args().any(|a| a == "--minimized");
     let state = AppState {

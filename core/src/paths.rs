@@ -66,6 +66,28 @@ pub fn is_installed(exe_dir: &Path) -> bool {
     exe_dir.join("uninstall.exe").is_file()
 }
 
+/// WebView2'nin yeniden oluşturulabilen önbellek klasörleri (oturum, mesajlar ve ayarlar bunlarda değildir).
+const CACHE_DIRS: &[&str] = &[
+    "Default/Cache",
+    "Default/Code Cache",
+    "Default/GPUCache",
+    "Default/DawnGraphiteCache",
+    "Default/DawnWebGPUCache",
+    "ShaderCache",
+    "GrShaderCache",
+    "GraphiteDawnCache",
+];
+
+/// Önbellek klasörlerini siler (WebView2 çalışmıyorken çağrılmalı). Silinen klasör sayısını döner.
+pub fn clear_webview_cache(webview_root: &Path) -> usize {
+    let base = webview_root.join("EBWebView");
+    CACHE_DIRS
+        .iter()
+        .map(|rel| base.join(rel))
+        .filter(|dir| dir.is_dir() && std::fs::remove_dir_all(dir).is_ok())
+        .count()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,6 +123,26 @@ mod tests {
         let err = DataPaths::for_exe_dir(&file).prepare().unwrap_err();
         assert!(matches!(err, PathError::NotWritable { .. }));
         assert!(err.to_string().contains("Veri klasörüne yazılamıyor"));
+    }
+    #[test] fn cache_clear_keeps_session() {
+        let root = tmp().join("webview");
+        let p = |rel: &str| root.join("EBWebView").join(rel);
+        for d in ["Default/Cache/Cache_Data", "Default/Code Cache/js", "Default/GPUCache", "ShaderCache", "GrShaderCache",
+                  "Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb", "Default/Local Storage/leveldb", "Default/Service Worker"] {
+            std::fs::create_dir_all(p(d)).unwrap();
+            std::fs::write(p(d).join("f"), b"x").unwrap();
+        }
+        let removed = clear_webview_cache(&root);
+        assert_eq!(removed, 5);
+        for gone in ["Default/Cache", "Default/Code Cache", "Default/GPUCache", "ShaderCache", "GrShaderCache"] {
+            assert!(!p(gone).exists(), "{gone} silinmeli");
+        }
+        for kept in ["Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/f", "Default/Local Storage/leveldb/f", "Default/Service Worker/f"] {
+            assert!(p(kept).exists(), "{kept} korunmalı (oturum)");
+        }
+    }
+    #[test] fn cache_clear_on_missing_folder_is_noop() {
+        assert_eq!(clear_webview_cache(&tmp().join("yok")), 0);
     }
     #[test] fn installed_detection() {
         let d = tmp();

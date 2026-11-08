@@ -14,11 +14,13 @@ pub struct Settings {
     pub compat_mode: bool,
     /// true: WebView2, Tauri'nin ek başlatma bayrakları olmadan (kendi varsayılanlarıyla) açılır (deney).
     pub webview_defaults: bool,
+    /// true: bir sonraki açılışta WebView2 önbellekleri silinir (sonra kendiliğinden false olur).
+    pub clear_cache_on_start: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false, webview_defaults: false }
+        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false, webview_defaults: false, clear_cache_on_start: false }
     }
 }
 
@@ -127,7 +129,7 @@ mod tests {
     }
     #[test] fn roundtrip() {
         let p = tmp().join("settings.json");
-        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true, webview_defaults: true };
+        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true, webview_defaults: true, clear_cache_on_start: false };
         save(&p, &s).unwrap();
         assert_eq!(load(&p), (s, None));
     }
@@ -177,6 +179,11 @@ mod tests {
         assert!(!load(&p).0.webview_defaults);
         update(&p, |s| s.webview_defaults = true).unwrap();
         assert!(load(&p).0.webview_defaults);
+    }
+    #[test] fn clear_cache_flag_defaults_off() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, r#"{}"#).unwrap();
+        assert!(!load(&p).0.clear_cache_on_start);
     }
     #[test] fn compat_mode_defaults_off() {
         let p = tmp().join("settings.json");
