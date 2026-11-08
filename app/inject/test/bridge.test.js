@@ -67,6 +67,24 @@ const page_html = `<!doctype html><html><head><title>WhatsApp</title></head><bod
   });
   assert.strictEqual(fired, 0, "<head> içindeki stil eklemeleri başlık izleyicisini çalıştırmamalı");
 
+  // 5) Kaydırma sırasında 50 ms'den uzun işler olursa 10 sn içinde perf_report gönderilir
+  await page.evaluate(() => {
+    window.__calls = [];
+    document.dispatchEvent(new Event("scroll"));
+    setTimeout(() => { const t = performance.now(); while (performance.now() - t < 150) {} }, 0); // 150 ms'lik uzun iş
+  });
+  await page.waitForFunction(() => window.__calls.some(([c]) => c === "perf_report"), null, { timeout: 15000 });
+  const rep = await page.evaluate(() => window.__calls.find(([c]) => c === "perf_report")[1]);
+  assert.ok(rep.count >= 1, "en az bir uzun iş sayılmalı");
+  assert.ok(rep.max_ms >= 100, "en uzun iş ~150 ms olmalı: " + rep.max_ms);
+  assert.strictEqual(rep.scrolling, true);
+  assert.strictEqual(typeof rep.source, "string");
+
+  // 6) Uzun iş yoksa rapor gönderilmez
+  await page.evaluate(() => { window.__calls = []; });
+  await page.waitForTimeout(11000);
+  assert.strictEqual(await page.evaluate(() => window.__calls.filter(([c]) => c === "perf_report").length), 0);
+
   await browser.close();
-  console.log("bridge.js: 4/4 senaryo geçti");
+  console.log("bridge.js: 6/6 senaryo geçti");
 })().catch((e) => { console.error(e); process.exit(1); });
