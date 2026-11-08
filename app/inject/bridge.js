@@ -90,6 +90,48 @@
     if (hideBanner() || ++bannerChecks >= 40) clearInterval(bannerTimer);
   }, 3000);
 
+  // Teşhis: 50 ms'den uzun süren işleri (takılan kareler) 10 saniyelik özetler hâlinde log'a gönderir.
+  // "source", takılmada en çok süre harcayan betiğin adı (WhatsApp'ın kendi kodu mu, başka bir şey mi).
+  const perf = { count: 0, total: 0, max: 0, sources: new Map(), scrolledAt: 0 };
+  document.addEventListener("scroll", () => { perf.scrolledAt = Date.now(); }, { capture: true, passive: true });
+  document.addEventListener("wheel", () => { perf.scrolledAt = Date.now(); }, { capture: true, passive: true });
+  const record = (duration, source) => {
+    perf.count++;
+    perf.total += duration;
+    perf.max = Math.max(perf.max, duration);
+    perf.sources.set(source, (perf.sources.get(source) || 0) + duration);
+  };
+  const shortSource = (url) => {
+    if (!url) return "bilinmiyor";
+    try { const u = new URL(url); return u.host + u.pathname.split("/").slice(-1)[0].slice(0, 40); } catch { return String(url).slice(0, 40); }
+  };
+  try {
+    const types = PerformanceObserver.supportedEntryTypes || [];
+    if (types.includes("long-animation-frame")) {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) {
+          const top = (e.scripts || []).slice().sort((a, b) => b.duration - a.duration)[0];
+          record(e.duration, top ? shortSource(top.sourceURL) + " " + (top.invoker || "").slice(0, 40) : "çizim/stil");
+        }
+      }).observe({ type: "long-animation-frame", buffered: false });
+    } else if (types.includes("longtask")) {
+      new PerformanceObserver((list) => { for (const e of list.getEntries()) record(e.duration, "longtask"); })
+        .observe({ type: "longtask", buffered: false });
+    }
+  } catch (_) {}
+  setInterval(() => {
+    if (perf.count === 0) return;
+    const top = [...perf.sources.entries()].sort((a, b) => b[1] - a[1])[0];
+    invoke("perf_report", {
+      count: perf.count,
+      total_ms: Math.round(perf.total),
+      max_ms: Math.round(perf.max),
+      scrolling: Date.now() - perf.scrolledAt < 10000,
+      source: top ? top[0] : "",
+    });
+    perf.count = 0; perf.total = 0; perf.max = 0; perf.sources.clear();
+  }, 10000);
+
   window.__wrs = {
     click(id) {
       const n = store.get(id);

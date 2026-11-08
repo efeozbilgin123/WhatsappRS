@@ -1,7 +1,7 @@
 fn main() {
     tauri_build::try_build(
         tauri_build::Attributes::new()
-            .app_manifest(tauri_build::AppManifest::new().commands(&["set_unread", "notify"])),
+            .app_manifest(tauri_build::AppManifest::new().commands(&["set_unread", "notify", "perf_report"])),
     )
     .expect("tauri build betiği başarısız");
 }

@@ -113,16 +113,34 @@ fn toggle_setting(app: &AppHandle, name: &str, field: fn(&mut whatsapprs_core::s
     }
 }
 
+fn icon_overlay(label: &str) -> Image<'static> {
+    let bytes: &'static [u8] = match label {
+        "1" => include_bytes!("../icons/overlay-1.png"),
+        "2" => include_bytes!("../icons/overlay-2.png"),
+        "3" => include_bytes!("../icons/overlay-3.png"),
+        "4" => include_bytes!("../icons/overlay-4.png"),
+        "5" => include_bytes!("../icons/overlay-5.png"),
+        "6" => include_bytes!("../icons/overlay-6.png"),
+        "7" => include_bytes!("../icons/overlay-7.png"),
+        "8" => include_bytes!("../icons/overlay-8.png"),
+        "9" => include_bytes!("../icons/overlay-9.png"),
+        _ => include_bytes!("../icons/overlay-9plus.png"),
+    };
+    Image::from_bytes(bytes).expect("kaplama ikonu")
+}
+
 pub fn update_unread(app: &AppHandle, count: u32) {
-    let (icon, tooltip) = match whatsapprs_core::unread::badge_label(count) {
-        Some(label) => (icon_badge(label), format!("WhatsappRS — {count} okunmamış")),
+    let label = whatsapprs_core::unread::badge_label(count);
+    let (icon, tooltip) = match label {
+        Some(l) => (icon_badge(l), format!("WhatsappRS — {count} okunmamış")),
         None => (icon_normal(), "WhatsappRS".to_string()),
     };
     if let Some(tray) = app.tray_by_id(ID) {
-        let _ = tray.set_icon(Some(icon.clone()));
+        let _ = tray.set_icon(Some(icon));
         let _ = tray.set_tooltip(Some(tooltip));
     }
+    // Görev çubuğu: logo değişmez, Windows köşeye yalnızca kırmızı sayıyı koyar.
     if let Some(w) = app.get_webview_window(window::LABEL) {
-        let _ = w.set_overlay_icon(if count > 0 { Some(icon) } else { None });
+        let _ = w.set_overlay_icon(label.map(icon_overlay));
     }
 }

@@ -61,7 +61,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![commands::set_unread, commands::notify])
+        .invoke_handler(tauri::generate_handler![commands::set_unread, commands::notify, commands::perf_report])
         .setup(move |app| {
             let handle = app.handle();
             tray::init(handle)?;
