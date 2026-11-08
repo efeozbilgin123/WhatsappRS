@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "remote-whatsapp",
+  "description": "WhatsApp Web yalnızca okunmamış sayısını ve bildirimleri iletebilir.",
+  "windows": ["main"],
+  "remote": { "urls": ["https://web.whatsapp.com"] },
+  "permissions": ["allow-set-unread", "allow-notify"]
+}

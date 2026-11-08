@@ -1,0 +1,36 @@
+name: build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p whatsapprs-core
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: tauri-cli@2
+      - name: Testler
+        run: cargo test --workspace
+      - name: Derleme (kurulum programı)
+        working-directory: app
+        run: cargo tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WhatsappRS-windows
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
