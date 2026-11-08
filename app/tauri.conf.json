@@ -16,7 +16,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "publisher": "efe",
     "shortDescription": "WhatsApp Web için hafif masaüstü kabuğu",
     "icon": [
@@ -25,6 +27,20 @@
       "icons/128x128@2x.png",
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "template": "windows/installer.nsi",
+        "languages": [
+          "Turkish",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
   }
 }
