@@ -4,7 +4,7 @@ WhatsApp Web'i hafif bir Rust ([Tauri v2](https://tauri.app)) penceresinde çal�
 Mesajlar, medya ve sesli/görüntülü/grup aramaları dahil WhatsApp Web'in tüm özellikleri aynen çalışır;
 üstüne şunları ekler:
 
-- **Sistem tepsisi:** pencereyi kapatınca arka planda çalışır, okunmamış mesajda kırmızı nokta.
+- **Sistem tepsisi:** pencereyi kapatınca arka planda çalışır, okunmamış mesajda turuncu nokta.
 - **Windows bildirimleri:** tıklayınca ilgili sohbet açılır.
 - **Global kısayol:** `Ctrl+Alt+W` ile göster/gizle.
 - **Açılışta başlatma:** tepsi menüsünden açılıp kapatılır, gizli başlar.

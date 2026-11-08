@@ -17,20 +17,12 @@ fn icon_normal() -> Image<'static> {
     Image::from_bytes(include_bytes!("../icons/tray.png")).expect("tepsi ikonu")
 }
 
-fn icon_badge(label: &str) -> Image<'static> {
-    let bytes: &'static [u8] = match label {
-        "1" => include_bytes!("../icons/tray-1.png"),
-        "2" => include_bytes!("../icons/tray-2.png"),
-        "3" => include_bytes!("../icons/tray-3.png"),
-        "4" => include_bytes!("../icons/tray-4.png"),
-        "5" => include_bytes!("../icons/tray-5.png"),
-        "6" => include_bytes!("../icons/tray-6.png"),
-        "7" => include_bytes!("../icons/tray-7.png"),
-        "8" => include_bytes!("../icons/tray-8.png"),
-        "9" => include_bytes!("../icons/tray-9.png"),
-        _ => include_bytes!("../icons/tray-9plus.png"),
-    };
-    Image::from_bytes(bytes).expect("rozet ikonu")
+fn icon_unread() -> Image<'static> {
+    Image::from_bytes(include_bytes!("../icons/tray-unread.png")).expect("tepsi ikonu")
+}
+
+fn overlay_unread() -> Image<'static> {
+    Image::from_bytes(include_bytes!("../icons/overlay-unread.png")).expect("kaplama ikonu")
 }
 
 pub fn init(app: &AppHandle) -> tauri::Result<()> {
@@ -126,34 +118,18 @@ fn toggle_setting(app: &AppHandle, name: &str, field: fn(&mut whatsapprs_core::s
     }
 }
 
-fn icon_overlay(label: &str) -> Image<'static> {
-    let bytes: &'static [u8] = match label {
-        "1" => include_bytes!("../icons/overlay-1.png"),
-        "2" => include_bytes!("../icons/overlay-2.png"),
-        "3" => include_bytes!("../icons/overlay-3.png"),
-        "4" => include_bytes!("../icons/overlay-4.png"),
-        "5" => include_bytes!("../icons/overlay-5.png"),
-        "6" => include_bytes!("../icons/overlay-6.png"),
-        "7" => include_bytes!("../icons/overlay-7.png"),
-        "8" => include_bytes!("../icons/overlay-8.png"),
-        "9" => include_bytes!("../icons/overlay-9.png"),
-        _ => include_bytes!("../icons/overlay-9plus.png"),
-    };
-    Image::from_bytes(bytes).expect("kaplama ikonu")
-}
-
 pub fn update_unread(app: &AppHandle, count: u32) {
-    let label = whatsapprs_core::unread::badge_label(count);
-    let (icon, tooltip) = match label {
-        Some(l) => (icon_badge(l), format!("WhatsappRS — {count} okunmamış")),
-        None => (icon_normal(), "WhatsappRS".to_string()),
+    let (icon, tooltip) = if count > 0 {
+        (icon_unread(), format!("WhatsappRS — {count} okunmamış"))
+    } else {
+        (icon_normal(), "WhatsappRS".to_string())
     };
     if let Some(tray) = app.tray_by_id(ID) {
         let _ = tray.set_icon(Some(icon));
         let _ = tray.set_tooltip(Some(tooltip));
     }
-    // Görev çubuğu: logo değişmez, Windows köşeye yalnızca kırmızı sayıyı koyar.
+    // Görev çubuğu: logo değişmez, Windows köşeye yalnızca turuncu noktayı koyar.
     if let Some(w) = app.get_webview_window(window::LABEL) {
-        let _ = w.set_overlay_icon(label.map(icon_overlay));
+        let _ = w.set_overlay_icon(if count > 0 { Some(overlay_unread()) } else { None });
     }
 }
