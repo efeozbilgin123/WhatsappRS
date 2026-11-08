@@ -13,7 +13,13 @@ const PROBE: &str = r#"(() => {
       renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     }
   } catch (e) { renderer = "hata: " + e; }
-  return { renderer, dpr: devicePixelRatio, w: innerWidth, h: innerHeight, cores: navigator.hardwareConcurrency, ram_gb: navigator.deviceMemory };
+  // JavaScript hız testi: JIT derleyici kapalıyken (ör. Edge "gelişmiş güvenlik modu" politikası) ~4 kat
+  // yavaş çalışır; ayrıca JIT kapalıyken WebAssembly de kapanır (wasm: false).
+  const t0 = performance.now();
+  let x = 0;
+  for (let i = 0; i < 2e7; i++) { x = (x + i * 7) % 1000003; }
+  const js_bench_ms = Math.round(performance.now() - t0);
+  return { js_bench_ms, wasm: typeof WebAssembly !== "undefined", x_check: x % 10, renderer, dpr: devicePixelRatio, w: innerWidth, h: innerHeight, cores: navigator.hardwareConcurrency, ram_gb: navigator.deviceMemory };
 })()"#;
 
 #[cfg(windows)]
