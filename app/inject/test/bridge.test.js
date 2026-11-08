@@ -9,7 +9,7 @@ const bridge = fs.readFileSync(path.join(__dirname, "..", "bridge.js"), "utf8");
 const page_html = `<!doctype html><html><head><title>WhatsApp</title></head><body>
 <div id="app" style="height:700px">
   <div id="side" style="height:700px">
-    <div id="banner" style="height:56px"><div><div><span>Windows için WhatsApp'ı indirin</span></div><button>x</button></div></div>
+    <div id="banner" style="height:56px"><div><div><span>Windows için WhatsApp'ı indirin</span></div><button aria-label="Kapat" onclick="window.__closed = true">x</button></div></div>
     <div id="chats" style="height:600px"><span>Sohbet 1</span></div>
   </div>
 </div></body></html>`;
@@ -29,6 +29,7 @@ const page_html = `<!doctype html><html><head><title>WhatsApp</title></head><bod
   await page.waitForFunction(() => getComputedStyle(document.getElementById("banner")).display === "none", null, { timeout: 5000 });
   assert.notStrictEqual(await page.evaluate(() => getComputedStyle(document.getElementById("chats")).display), "none");
   assert.notStrictEqual(await page.evaluate(() => getComputedStyle(document.getElementById("side")).display), "none");
+  assert.strictEqual(await page.evaluate(() => window.__closed === true), true, "WhatsApp'ın kapatma düğmesine basılmalı (kalıcı kapatma)");
 
   // 2) Başlık değişince set_unread hemen (gözlemciyle) gönderilir
   await page.evaluate(() => { window.__calls = []; document.title = "(3) WhatsApp"; });
@@ -50,6 +51,22 @@ const page_html = `<!doctype html><html><head><title>WhatsApp</title></head><bod
   assert.strictEqual(r.call.body, "selam");
   assert.ok(r.clicked, "bildirime tıklama onclick'i tetiklemeli");
 
+  // 4) Başlık izleyicisi <head> içindeki başka değişikliklerde tetiklenmez (yalnızca <title>)
+  const fired = await page.evaluate(async () => {
+    const desc = Object.getOwnPropertyDescriptor(Document.prototype, "title");
+    let reads = 0;
+    Object.defineProperty(document, "title", { configurable: true, get() { reads++; return desc.get.call(this); }, set(v) { desc.set.call(this, v); } });
+    for (let i = 0; i < 200; i++) {
+      const st = document.createElement("style");
+      st.textContent = ".x" + i + "{color:red}";
+      document.head.appendChild(st);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+    delete document.title;
+    return reads;
+  });
+  assert.strictEqual(fired, 0, "<head> içindeki stil eklemeleri başlık izleyicisini çalıştırmamalı");
+
   await browser.close();
-  console.log("bridge.js: 3/3 senaryo geçti");
+  console.log("bridge.js: 4/4 senaryo geçti");
 })().catch((e) => { console.error(e); process.exit(1); });

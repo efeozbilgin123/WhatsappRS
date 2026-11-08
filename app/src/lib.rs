@@ -8,6 +8,7 @@ mod notify;
 mod permissions;
 mod shortcuts;
 mod titlebar;
+mod update;
 mod tray;
 mod window;
 
@@ -26,6 +27,7 @@ pub struct AppState {
 pub fn run() {
     let exe = std::env::current_exe().unwrap_or_else(|e| fatal::fatal(&format!("Uygulama konumu bulunamadı: {e}")));
     let exe_dir = exe.parent().expect("exe bir klasörde").to_path_buf();
+    whatsapprs_core::selfupdate::cleanup_old(&exe);
     let paths = DataPaths::for_exe_dir(&exe_dir);
     if let Err(e) = paths.prepare() {
         fatal::fatal(&e.to_string());
@@ -54,6 +56,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .invoke_handler(tauri::generate_handler![commands::set_unread, commands::notify])
         .setup(move |app| {
@@ -61,6 +64,7 @@ pub fn run() {
             tray::init(handle)?;
             window::create(handle, start_hidden)?;
             shortcuts::init(handle);
+            update::start(handle);
             Ok(())
         })
         .run(tauri::generate_context!());

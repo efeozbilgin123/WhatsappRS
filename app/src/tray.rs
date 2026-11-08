@@ -1,6 +1,6 @@
 //! Sistem tepsisi simgesi, menüsü ve okunmamış rozeti.
 
-use crate::window;
+use crate::{window, AppState};
 use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -8,6 +8,8 @@ use tauri::{AppHandle, Manager};
 
 pub const ID: &str = "main";
 pub const AUTOSTART_ID: &str = "autostart";
+pub const COMPAT_ID: &str = "compat";
+pub const UPDATE_ID: &str = "update";
 
 fn icon_normal() -> Image<'static> {
     Image::from_bytes(include_bytes!("../icons/tray.png")).expect("tepsi ikonu")
@@ -34,11 +36,15 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     let reload = MenuItem::with_id(app, "reload", "Yeniden yükle", true, None::<&str>)?;
     let autostart_on = crate::autostart::is_enabled(app);
     let autostart = CheckMenuItem::with_id(app, AUTOSTART_ID, "Açılışta başlat", true, autostart_on, None::<&str>)?;
+    let compat_on = app.state::<AppState>().settings.lock().unwrap().compat_mode;
+    let compat = CheckMenuItem::with_id(app, COMPAT_ID, "Uyumluluk modu (sorun giderme)", true, compat_on, None::<&str>)?;
+    let update = MenuItem::with_id(app, UPDATE_ID, "Güncellemeleri denetle", true, None::<&str>)?;
+    app.manage(crate::update::UpdateMenuItem(update.clone()));
     let quit = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
 
-    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &sep2, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &reload, &sep1, &autostart, &compat, &update, &sep2, &quit])?;
 
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id(ID)
@@ -55,6 +61,22 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
                 }
                 let _ = autostart_item.set_checked(crate::autostart::is_enabled(app));
             }
+            COMPAT_ID => {
+                let state = app.state::<AppState>();
+                let on = {
+                    let mut s = state.settings.lock().unwrap();
+                    s.compat_mode = !s.compat_mode;
+                    s.compat_mode
+                };
+                if let Err(e) = whatsapprs_core::settings::update(&state.paths.settings, |s| s.compat_mode = on) {
+                    log::warn!("uyumluluk modu kaydedilemedi: {e}");
+                    return;
+                }
+                log::info!("uyumluluk modu {} — yeniden başlatılıyor", if on { "açıldı" } else { "kapatıldı" });
+                window::save_geometry(app);
+                app.restart();
+            }
+            UPDATE_ID => crate::update::on_menu_click(app),
             "toggle" => window::toggle(app),
             "reload" => {
                 if let Some(w) = app.get_webview_window(window::LABEL) {

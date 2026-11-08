@@ -9,20 +9,26 @@
   };
 
   // Okunmamış sayısı: başlık "(3) WhatsApp" biçimindedir; ayrıştırmayı Rust yapar.
-  // Pencere gizliyken tarayıcı zamanlayıcıları dakikada bire kadar yavaşlatabilir; bu yüzden asıl
-  // tetikleyici başlık değişimini izleyen MutationObserver, setInterval yalnızca yedek.
+  // Yalnızca <title> öğesi izlenir (WhatsApp <head>'e sürekli stil ekler; onları izlemek gereksiz yük).
+  // Pencere gizliyken zamanlayıcılar yavaşlayabildiği için asıl tetikleyici gözlemci, setInterval yedek.
   let lastTitle = null;
+  let watchedTitle = null;
+  const titleObserver = new MutationObserver(() => sendTitle());
   const sendTitle = () => {
+    const el = document.querySelector("head > title");
+    if (el && el !== watchedTitle) {
+      titleObserver.disconnect();
+      titleObserver.observe(el, { subtree: true, childList: true, characterData: true });
+      watchedTitle = el;
+    }
     const title = document.title;
     if (title !== lastTitle) {
       lastTitle = title;
       invoke("set_unread", { title });
     }
   };
-  const watchHead = () =>
-    new MutationObserver(sendTitle).observe(document.head, { subtree: true, childList: true, characterData: true });
-  if (document.head) watchHead();
-  else document.addEventListener("DOMContentLoaded", watchHead, { once: true });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sendTitle, { once: true });
+  else sendTitle();
   setInterval(sendTitle, 5000);
 
   // Bildirimler: WebView2 web bildirimlerini göstermez; WhatsApp'ın çağrılarını yakalayıp Rust'a iletiyoruz.
@@ -60,8 +66,9 @@
     };
   }
 
-  // "Windows için WhatsApp'ı indirin" çubuğunu gizle. WhatsApp'ın CSS sınıfları rastgele olduğundan
-  // metinden bulunur; çubuğun kendisi, metni içeren ve 100 px'den alçak en dış kapsayıcıdır.
+  // "Windows için WhatsApp'ı indirin" çubuğu: metinden bulunur (CSS sınıfları rastgele), WhatsApp'ın kendi
+  // kapatma düğmesine basılır (kalıcı olarak hatırlar) ve gizlenir. Uzun sohbetlerde yük olmasın diye
+  // arama yalnızca açılıştan sonraki 2 dakika sürer ve çubuk bulununca durur.
   const BANNER_TEXT = ["WhatsApp'ı indirin", "Download WhatsApp for Windows", "WhatsApp uygulamasını indirin"];
   const xpath = "//span[" + BANNER_TEXT.map((t) => `contains(text(), "${t}")`).join(" or ") + "]";
   const hideBanner = () => {
@@ -72,19 +79,16 @@
       while (el.parentElement && el.parentElement !== document.body && el.parentElement.offsetHeight > 0 && el.parentElement.offsetHeight < 100) {
         el = el.parentElement;
       }
-      if (el.style.display !== "none") el.style.setProperty("display", "none", "important");
+      const close = el.querySelector("button, [role='button']");
+      if (close) close.click();
+      el.style.setProperty("display", "none", "important");
     }
     return found.snapshotLength > 0;
   };
-  // Sayfa yüklenirken sık, sonra seyrek kontrol (uzun sohbetlerde performansı etkilemesin).
-  let checks = 0;
+  let bannerChecks = 0;
   const bannerTimer = setInterval(() => {
-    hideBanner();
-    if (++checks === 60) {
-      clearInterval(bannerTimer);
-      setInterval(hideBanner, 30000);
-    }
-  }, 2000);
+    if (hideBanner() || ++bannerChecks >= 40) clearInterval(bannerTimer);
+  }, 3000);
 
   window.__wrs = {
     click(id) {

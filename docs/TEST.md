@@ -54,8 +54,14 @@ Her maddeyi deneyip kutuyu işaretle. Bir şey beklendiği gibi çalışmazsa
 - [ ] Bir sohbette "tümünü indir" gibi birden fazla dosya indir → hepsi iner.
 - [ ] Bir PDF'i önizlemede aç/kapat → çalışır.
 
-## Kasma karşılaştırması
-- [ ] Uzun bir sohbette yukarı kaydır ve PDF aç/kapat: aynı işlemi Edge'de web.whatsapp.com'da da dene. Sadece WhatsappRS'te kasıyorsa log dosyasıyla bildir.
+## Kasma
+- [ ] Bir PDF'i önizlemede aç/kapat, sonra uzun bir sohbette yukarı kaydır → kasma yok.
+- [ ] Kasma varsa: tepsi → "Uyumluluk modu" işaretle (uygulama yeniden başlar) → aynı adımları tekrarla. Kasma kalktıysa sorun bizim betikte; kalkmadıysa başka yerde. Sonucu bildir, sonra modu kapat.
+
+## Güncelleme
+- [ ] Tepsi → "Güncellemeleri denetle" → güncel sürümdeyken "WhatsappRS güncel." bildirimi.
+- [ ] Yeni sürüm yayınlandığında: "WhatsappRS X hazır" bildirimi → tıkla → uygulama kapanıp güncellenir, yeniden açılır, QR istenmez.
+- [ ] Taşınabilir sürümde aynı akış: klasördeki exe yenisiyle değişir, bir sonraki açılışta `WhatsappRS.exe.old` silinir.
 
 ## Açılışta başlatma
 - [ ] Tepsi → "Açılışta başlat" işaretle → bilgisayarı yeniden başlat → uygulama **gizli** (sadece tepside) açılır.

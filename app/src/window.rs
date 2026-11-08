@@ -16,13 +16,20 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
     let nav_app = app.clone();
     let new_app = app.clone();
 
-    let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url))
+    let compat_mode = state.settings.lock().unwrap().compat_mode;
+    if compat_mode {
+        log::warn!("uyumluluk modu açık: sayfaya betik eklenmiyor (rozet ve bildirimler çalışmaz)");
+    }
+    let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url));
+    if !compat_mode {
+        builder = builder.initialization_script(include_str!("../inject/bridge.js"));
+    }
+    let window = builder
         .title("WhatsappRS")
         .inner_size(1100.0, 750.0)
         .min_inner_size(600.0, 450.0)
         .visible(false)
         .data_directory(state.paths.webview.clone())
-        .initialization_script(include_str!("../inject/bridge.js"))
         // Koyu tema: WhatsApp "sistem varsayılanı" temasında koyu açılır, açılışta beyaz parlama olmaz.
         .theme(Some(Theme::Dark))
         .background_color(Color(crate::titlebar::BACKGROUND.0, crate::titlebar::BACKGROUND.1, crate::titlebar::BACKGROUND.2, 255))

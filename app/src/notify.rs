@@ -55,6 +55,30 @@ pub fn download_finished(app: &AppHandle, path: Option<&std::path::Path>, succes
     let _ = name;
 }
 
+/// Güncelleme indirildi; tıklanınca yüklenir.
+pub fn update_ready(app: &AppHandle, version: &str) {
+    #[cfg(windows)]
+    {
+        use tauri_winrt_notification::Toast;
+        let installed = app.state::<AppState>().installed;
+        let app_id = if installed { APP_ID } else { Toast::POWERSHELL_APP_ID };
+        let app2 = app.clone();
+        let r = Toast::new(app_id)
+            .title(&format!("WhatsappRS {version} hazır"))
+            .text1("Yüklemek ve yeniden başlatmak için tıklayın.")
+            .on_activated(move |_| {
+                crate::update::install(&app2);
+                Ok(())
+            })
+            .show();
+        if let Err(e) = r {
+            log::warn!("güncelleme bildirimi gösterilemedi: {e}");
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = (app, version);
+}
+
 /// Uygulamanın kendi bilgi mesajı (WhatsApp'tan gelmeyen).
 pub fn info(app: &AppHandle, text: &str) {
     let installed = app.state::<AppState>().installed;

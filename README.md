@@ -9,6 +9,7 @@ Mesajlar, medya ve sesli/görüntülü/grup aramaları dahil WhatsApp Web'in tü
 - **Global kısayol:** `Ctrl+Alt+W` ile göster/gizle.
 - **Açılışta başlatma:** tepsi menüsünden açılıp kapatılır, gizli başlar.
 - **Tek klasör:** uygulama, oturumun ve ayarların hep aynı klasörde durur.
+- **Otomatik güncelleme:** kurulum ve taşınabilir sürüm kendini günceller (imzalı, GitHub Releases).
 
 Resmi olmayan WhatsApp protokolü kullanılmaz; yalnızca resmi `web.whatsapp.com` yüklenir, hesap ban riski yoktur.
 
@@ -45,6 +46,22 @@ Oturumu her zaman telefondan **Bağlı cihazlar** menüsünden kapatabilirsin.
 - **Kurulum sürümü:** Ayarlar → Uygulamalar → WhatsappRS → Kaldır. Verilerini saklayıp saklamamayı sorar.
   "Hayır" dersen hiçbir iz kalmaz (klasör, kısayollar, açılışta başlatma kaydı silinir).
 - **Taşınabilir sürüm:** "Açılışta başlat" açıksa önce tepsi menüsünden kapat (Windows kaydını siler), sonra klasörü sil.
+
+## Güncellemeler
+
+Uygulama açılıştan 30 saniye sonra ve her 6 saatte bir yeni sürüm arar, bulursa arka planda indirir ve
+"WhatsappRS X hazır" bildirimi gösterir. Bildirime ya da tepsideki **Güncellemeyi yükle** öğesine tıklayınca
+yüklenir ve yeniden başlar; oturum ve ayarlar korunur. Tepsideki **Güncellemeleri denetle** hemen arar.
+
+Güncellemeler imzalıdır; imzası tutmayan dosya yüklenmez. Yeni sürüm yayınlamak için
+`app/tauri.conf.json` içindeki `version` artırılır ve aynı adla etiket gönderilir (`v0.2.1`).
+GitHub deposunda `TAURI_SIGNING_PRIVATE_KEY` ve `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` gizli anahtarları tanımlı olmalı.
+
+## Sorun giderme
+
+Tepsi → **Uyumluluk modu**: uygulama, WhatsApp sayfasına hiçbir betik eklemeden yeniden başlar
+(okunmamış rozeti ve bildirimler bu modda çalışmaz). Bir sorunun bu uygulamadan mı yoksa WhatsApp Web'den mi
+kaynaklandığını anlamak için kullanılır. Kayıtlar: `data\logs\whatsapprs.log`.
 
 ## Ayarlar
 

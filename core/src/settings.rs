@@ -10,11 +10,13 @@ pub const DEFAULT_SHORTCUT: &str = "Ctrl+Alt+W";
 pub struct Settings {
     pub shortcut: String,
     pub window: Option<WindowGeom>,
+    /// true: WhatsApp sayfasına hiçbir betik eklenmez (sorun giderme için).
+    pub compat_mode: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None }
+        Settings { shortcut: DEFAULT_SHORTCUT.to_string(), window: None, compat_mode: false }
     }
 }
 
@@ -68,17 +70,22 @@ pub fn save(path: &Path, s: &Settings) -> std::io::Result<()> {
     std::fs::rename(&tmp, path)
 }
 
-/// Yalnızca pencere konumunu günceller; dosyadaki diğer alanlar (kullanıcının elle yaptığı
-/// değişiklikler dahil) korunur. Dosya bozuksa dokunulmaz ve hata döner.
-pub fn update_window(path: &Path, window: Option<WindowGeom>) -> std::io::Result<()> {
+/// Dosyadaki ayarları okur, `change` ile değiştirir ve kaydeder; kullanıcının dosyada elle yaptığı
+/// diğer değişiklikler korunur. Dosya bozuksa dokunulmaz ve hata döner.
+pub fn update(path: &Path, change: impl FnOnce(&mut Settings)) -> std::io::Result<()> {
     let mut current = match std::fs::read_to_string(path) {
         Ok(text) => serde_json::from_str::<Settings>(text.trim_start_matches('\u{feff}'))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Settings::default(),
         Err(e) => return Err(e),
     };
-    current.window = window;
+    change(&mut current);
     save(path, &current)
+}
+
+/// Yalnızca pencere konumunu günceller.
+pub fn update_window(path: &Path, window: Option<WindowGeom>) -> std::io::Result<()> {
+    update(path, |s| s.window = window)
 }
 
 const MIN_VISIBLE: i64 = 100;
@@ -118,7 +125,7 @@ mod tests {
     }
     #[test] fn roundtrip() {
         let p = tmp().join("settings.json");
-        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)) };
+        let s = Settings { shortcut: "Alt+Q".into(), window: Some(g(10, 20)), compat_mode: true };
         save(&p, &s).unwrap();
         assert_eq!(load(&p), (s, None));
     }
@@ -153,6 +160,19 @@ mod tests {
         let (s, _) = load(&p);
         assert_eq!(s.shortcut, "Alt+Q");
         assert_eq!(s.window, Some(g(10, 20)));
+    }
+    #[test] fn update_changes_only_given_field() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, r#"{"shortcut":"Alt+Q"}"#).unwrap();
+        update(&p, |s| s.compat_mode = true).unwrap();
+        let (s, _) = load(&p);
+        assert_eq!(s.shortcut, "Alt+Q");
+        assert!(s.compat_mode);
+    }
+    #[test] fn compat_mode_defaults_off() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, r#"{"shortcut":"Alt+Q"}"#).unwrap();
+        assert!(!load(&p).0.compat_mode);
     }
     #[test] fn update_window_leaves_corrupt_file_alone() {
         let p = tmp().join("settings.json");
