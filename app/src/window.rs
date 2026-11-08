@@ -17,13 +17,21 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
     let nav_app = app.clone();
     let new_app = app.clone();
 
-    let compat_mode = state.settings.lock().unwrap().compat_mode;
+    let (compat_mode, webview_defaults) = {
+        let s = state.settings.lock().unwrap();
+        (s.compat_mode, s.webview_defaults)
+    };
     if compat_mode {
         log::warn!("uyumluluk modu açık: sayfaya betik eklenmiyor (rozet ve bildirimler çalışmaz)");
     }
     let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url));
     if !compat_mode {
         builder = builder.initialization_script(include_str!("../inject/bridge.js"));
+    }
+    if webview_defaults {
+        // Tauri varsayılanı: --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection
+        log::warn!("deney: WebView2 ek başlatma bayrakları olmadan açılıyor");
+        builder = builder.additional_browser_args("");
     }
     let window = builder
         .title("WhatsappRS")
@@ -86,11 +94,14 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
             save_geometry(&ev_app);
             if let Some(w) = ev_app.get_webview_window(LABEL) {
                 let _ = w.hide();
+                crate::memory::set_low(&w, true);
             }
         }
     });
 
-    if !start_hidden {
+    if start_hidden {
+        crate::memory::set_low(&window, true);
+    } else {
         window.show()?;
         let _ = window.set_focus();
     }
@@ -159,6 +170,7 @@ fn open_external(app: &AppHandle, url: &str) {
 
 pub fn show(app: &AppHandle) {
     if let Some(w) = app.get_webview_window(LABEL) {
+        crate::memory::set_low(&w, false);
         let _ = w.show();
         let _ = w.unminimize();
         let _ = w.set_focus();
@@ -172,6 +184,7 @@ pub fn toggle(app: &AppHandle) {
         if visible && !minimized {
             save_geometry(app);
             let _ = w.hide();
+            crate::memory::set_low(&w, true);
         } else {
             show(app);
         }
