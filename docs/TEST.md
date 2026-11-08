@@ -26,10 +26,9 @@ Her maddeyi deneyip kutuyu işaretle. Bir şey beklendiği gibi çalışmazsa
 - [ ] `Ctrl` + `+` / `-` / `0` ile yakınlaştırma çalışır.
 
 ## Okunmamış rozeti
-- [ ] Pencere gizliyken başka bir telefondan mesaj gönder → tepsi simgesinde kırmızı rozet içinde sayı ("1"); üzerine gelince "WhatsappRS — 1 okunmamış".
-- [ ] 10+ okunmamışta rozet "9+" gösterir.
-- [ ] Görev çubuğu simgesinde de rozet görünür.
-- [ ] Mesajı oku → rozet kaybolur.
+- [ ] Pencere gizliyken başka bir telefondan mesaj gönder → tepsi simgesinin sağ üstünde turuncu nokta; üzerine gelince "WhatsappRS — 1 okunmamış".
+- [ ] Görev çubuğu simgesinin köşesinde de turuncu nokta görünür, logo kapanmaz.
+- [ ] Mesajı oku → nokta kaybolur.
 - [ ] Pencere 10+ dakika tepsideyken gelen mesajda rozet birkaç saniye içinde güncellenir.
 
 ## Bildirimler
