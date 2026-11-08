@@ -20,10 +20,20 @@ pub fn allow_permission(origin: &str, kind: PermKind) -> bool {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NewWindowAction { OpenInApp, OpenExternal, Deny }
+pub enum NewWindowAction {
+    OpenInApp,
+    OpenExternal,
+    /// Adres henüz belli değil (about:blank): gizli bir yardımcı pencere açılır, ilk gerçek adres
+    /// varsayılan tarayıcıya gönderilir ve pencere kapatılır.
+    OpenViaHelper,
+    Deny,
+}
 
 /// WhatsApp'ın açmak istediği yeni pencere (PDF/medya önizleme, dış bağlantı) için karar.
 pub fn new_window_action(url: &str) -> NewWindowAction {
+    if url.is_empty() || url == "about:blank" {
+        return NewWindowAction::OpenViaHelper;
+    }
     if let Some(inner) = url.strip_prefix("blob:") {
         return if is_whatsapp(inner) { NewWindowAction::OpenInApp } else { NewWindowAction::Deny };
     }
@@ -107,6 +117,9 @@ mod tests {
         assert_eq!(new_window_action("https://example.com/a"), NewWindowAction::OpenExternal);
         assert_eq!(new_window_action("http://example.com/a"), NewWindowAction::OpenExternal);
         assert_eq!(new_window_action("blob:https://evil.com/x"), NewWindowAction::Deny);
+        // WhatsApp bağlantıyı önce boş pencere açıp sonra adres vererek açabilir
+        assert_eq!(new_window_action("about:blank"), NewWindowAction::OpenViaHelper);
+        assert_eq!(new_window_action(""), NewWindowAction::OpenViaHelper);
         assert_eq!(new_window_action("javascript:alert(1)"), NewWindowAction::Deny);
         assert_eq!(new_window_action("file:///C:/Windows/system32/calc.exe"), NewWindowAction::Deny);
         assert_eq!(new_window_action("ms-settings:"), NewWindowAction::Deny);

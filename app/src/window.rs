@@ -6,6 +6,7 @@ use tauri::window::Color;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Theme, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_opener::OpenerExt;
 use whatsapprs_core::policy::{is_internal_url, new_window_action, NewWindowAction, WHATSAPP_URL};
+use std::time::Duration;
 use whatsapprs_core::settings::{self, geom_is_visible, Rect, WindowGeom};
 
 pub const LABEL: &str = "main";
@@ -45,15 +46,19 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
                 false
             }
         })
-        .on_new_window(move |url, _features| match new_window_action(url.as_str()) {
-            NewWindowAction::OpenInApp => NewWindowResponse::Allow,
-            NewWindowAction::OpenExternal => {
-                open_external(&new_app, url.as_str());
-                NewWindowResponse::Deny
-            }
-            NewWindowAction::Deny => {
-                log::warn!("yeni pencere reddedildi: {url}");
-                NewWindowResponse::Deny
+        .on_new_window(move |url, features| {
+            log::info!("yeni pencere isteği: {}", short(&url));
+            match new_window_action(url.as_str()) {
+                NewWindowAction::OpenInApp => NewWindowResponse::Allow,
+                NewWindowAction::OpenExternal => {
+                    open_external(&new_app, url.as_str());
+                    NewWindowResponse::Deny
+                }
+                NewWindowAction::OpenViaHelper => link_helper(&new_app, features),
+                NewWindowAction::Deny => {
+                    log::warn!("yeni pencere reddedildi: {}", short(&url));
+                    NewWindowResponse::Deny
+                }
             }
         })
         .on_download(|webview, event| {
@@ -92,13 +97,63 @@ pub fn create(app: &AppHandle, start_hidden: bool) -> tauri::Result<WebviewWindo
     Ok(window)
 }
 
+/// Log için adresin yalnızca şema + alan adı kısmı (sohbet içeriği log'a yazılmasın).
+fn short(url: &tauri::Url) -> String {
+    format!("{}://{}", url.scheme(), url.host_str().unwrap_or(""))
+}
+
+/// WhatsApp bağlantıyı boş pencere açıp sonra adres vererek açarsa: görünmez bir yardımcı pencere
+/// oluşturulur, ilk gerçek adres varsayılan tarayıcıda açılır ve pencere kapatılır.
+fn link_helper(app: &AppHandle, features: tauri::webview::NewWindowFeatures) -> NewWindowResponse<tauri::Wry> {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+    let label = format!("link-{}", COUNTER.fetch_add(1, Ordering::Relaxed));
+    let (nav_app, nav_label) = (app.clone(), label.clone());
+    let built = WebviewWindowBuilder::new(app, &label, WebviewUrl::External("about:blank".parse().expect("sabit")))
+        .window_features(features)
+        .visible(false)
+        .skip_taskbar(true)
+        .on_navigation(move |url| {
+            if url.scheme() == "http" || url.scheme() == "https" {
+                log::info!("yardımcı pencere bağlantısı: {}", short(url));
+                open_external(&nav_app, url.as_str());
+                close_later(&nav_app, &nav_label, Duration::from_millis(200));
+                false
+            } else {
+                true
+            }
+        })
+        .build();
+    match built {
+        Ok(window) => {
+            // Hiç adres gelmezse de pencere ortada kalmasın.
+            close_later(app, &label, Duration::from_secs(15));
+            NewWindowResponse::Create { window }
+        }
+        Err(e) => {
+            log::warn!("yardımcı pencere açılamadı: {e}");
+            NewWindowResponse::Deny
+        }
+    }
+}
+
+fn close_later(app: &AppHandle, label: &str, after: Duration) {
+    let (app, label) = (app.clone(), label.to_string());
+    std::thread::spawn(move || {
+        std::thread::sleep(after);
+        if let Some(w) = app.get_webview_window(&label) {
+            let _ = w.destroy();
+        }
+    });
+}
+
 fn open_external(app: &AppHandle, url: &str) {
     if !(url.starts_with("https://") || url.starts_with("http://")) {
-        log::warn!("dış bağlantı reddedildi: {url}");
+        log::warn!("dış bağlantı reddedildi (http/https değil)");
         return;
     }
     if let Err(e) = app.opener().open_url(url, None::<&str>) {
-        log::warn!("bağlantı açılamadı {url}: {e}");
+        log::warn!("bağlantı açılamadı: {e}");
     }
 }
 

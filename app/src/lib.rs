@@ -9,6 +9,7 @@ mod permissions;
 mod shortcuts;
 mod titlebar;
 mod update;
+mod watchdog;
 mod tray;
 mod window;
 
@@ -65,6 +66,7 @@ pub fn run() {
             window::create(handle, start_hidden)?;
             shortcuts::init(handle);
             update::start(handle);
+            watchdog::start(handle);
             Ok(())
         })
         .run(tauri::generate_context!());
