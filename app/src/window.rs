@@ -109,25 +109,23 @@ fn restore_geometry(app: &AppHandle, window: &WebviewWindow) {
 
 pub fn save_geometry(app: &AppHandle) {
     let Some(w) = app.get_webview_window(LABEL) else { return };
-    let state = app.state::<AppState>();
-    let mut s = state.settings.lock().unwrap();
-    let maximized = w.is_maximized().unwrap_or(false);
-    let minimized = w.is_minimized().unwrap_or(false);
-    if minimized {
+    if w.is_minimized().unwrap_or(false) {
         return;
     }
-    if maximized {
+    let state = app.state::<AppState>();
+    let mut s = state.settings.lock().unwrap();
+    if w.is_maximized().unwrap_or(false) {
         // Büyütülmüşken normal boyutu bilinmez; yalnızca bayrağı güncelle.
-        if let Some(g) = s.window.as_mut() {
-            g.maximized = true;
-        } else {
-            return;
+        match s.window.as_mut() {
+            Some(g) => g.maximized = true,
+            None => return,
         }
     } else {
         let (Ok(pos), Ok(size)) = (w.outer_position(), w.inner_size()) else { return };
         s.window = Some(WindowGeom { x: pos.x, y: pos.y, width: size.width, height: size.height, maximized: false });
     }
-    if let Err(e) = settings::save(&state.paths.settings, &s) {
-        log::warn!("ayarlar kaydedilemedi: {e}");
+    // Yalnızca pencere alanını yaz: kullanıcının dosyada elle yaptığı değişiklikler korunur.
+    if let Err(e) = settings::update_window(&state.paths.settings, s.window) {
+        log::warn!("pencere konumu kaydedilemedi: {e}");
     }
 }

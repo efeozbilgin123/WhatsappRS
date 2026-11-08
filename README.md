@@ -48,7 +48,7 @@ Oturumu her zaman telefondan **Bağlı cihazlar** menüsünden kapatabilirsin.
 
 ## Ayarlar
 
-`data\settings.json` dosyasını uygulama kapalıyken düzenleyebilirsin:
+`data\settings.json` dosyasını düzenleyebilirsin (değişiklik uygulama yeniden açılınca geçerli olur):
 
 ```json
 { "shortcut": "Ctrl+Alt+W" }

@@ -13,9 +13,15 @@ fn is_whatsapp(url: &str) -> bool {
     }
 }
 
-/// Kamera/mikrofon/bildirim izni yalnızca WhatsApp Web'e verilir.
+/// Kamera/mikrofon izni yalnızca WhatsApp Web'e verilir. Bildirim izni verilmez:
+/// bildirimler bridge.js → Rust yolundan gider (aksi halde WebView2 kendi bildirimini de gösterir).
 pub fn allow_permission(origin: &str, kind: PermKind) -> bool {
-    kind != PermKind::Other && is_whatsapp(origin)
+    matches!(kind, PermKind::Microphone | PermKind::Camera) && is_whatsapp(origin)
+}
+
+/// Otomatik başlatma kayıt değeri: boşluklu yollar için tırnaklı.
+pub fn autostart_command(exe_path: &str) -> String {
+    format!("\"{exe_path}\" --minimized")
 }
 
 /// Webview içinde kalabilecek adres mi? Değilse varsayılan tarayıcıda açılır.
@@ -38,12 +44,16 @@ mod tests {
     use super::*;
 
     #[test] fn perm_allows_whatsapp_media() {
-        for k in [PermKind::Microphone, PermKind::Camera, PermKind::Notifications] {
+        for k in [PermKind::Microphone, PermKind::Camera] {
             assert!(allow_permission("https://web.whatsapp.com", k));
             assert!(allow_permission("https://web.whatsapp.com/", k));
         }
     }
-    #[test] fn perm_denies_other_kinds() { assert!(!allow_permission("https://web.whatsapp.com", PermKind::Other)); }
+    #[test] fn perm_denies_other_kinds() {
+        assert!(!allow_permission("https://web.whatsapp.com", PermKind::Other));
+        // Bildirimler bridge.js üzerinden gider; WebView2'nin kendi bildirimleri odak kuralını atlar.
+        assert!(!allow_permission("https://web.whatsapp.com", PermKind::Notifications));
+    }
     #[test] fn perm_denies_lookalikes() {
         for o in ["http://web.whatsapp.com", "https://web.whatsapp.com.evil.com", "https://evil.com/web.whatsapp.com",
                   "https://web.whatsapp.com:8443", "https://xweb.whatsapp.com", "https://whatsapp.com", "", "nonsense"] {
@@ -63,6 +73,12 @@ mod tests {
         assert!(should_show_toast(true, false));
         assert!(should_show_toast(false, false));
         assert!(should_show_toast(false, true));
+    }
+    #[test] fn autostart_command_is_quoted() {
+        assert_eq!(
+            autostart_command(r"C:\Users\Ali Veli\AppData\Local\Programs\WhatsappRS\WhatsappRS.exe"),
+            r#""C:\Users\Ali Veli\AppData\Local\Programs\WhatsappRS\WhatsappRS.exe" --minimized"#
+        );
     }
     #[test] fn second_instance_minimized() {
         assert!(!show_on_second_instance(&["WhatsappRS.exe".into(), "--minimized".into()]));

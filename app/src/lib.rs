@@ -53,7 +53,6 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(autostart::plugin())
         .manage(state)
         .invoke_handler(tauri::generate_handler![commands::set_unread, commands::notify])
         .setup(move |app| {

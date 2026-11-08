@@ -9,18 +9,26 @@
   };
 
   // Okunmamış sayısı: başlık "(3) WhatsApp" biçimindedir; ayrıştırmayı Rust yapar.
+  // Pencere gizliyken tarayıcı zamanlayıcıları dakikada bire kadar yavaşlatabilir; bu yüzden asıl
+  // tetikleyici başlık değişimini izleyen MutationObserver, setInterval yalnızca yedek.
   let lastTitle = null;
-  setInterval(() => {
+  const sendTitle = () => {
     const title = document.title;
     if (title !== lastTitle) {
       lastTitle = title;
       invoke("set_unread", { title });
     }
-  }, 1000);
+  };
+  const watchHead = () =>
+    new MutationObserver(sendTitle).observe(document.head, { subtree: true, childList: true, characterData: true });
+  if (document.head) watchHead();
+  else document.addEventListener("DOMContentLoaded", watchHead, { once: true });
+  setInterval(sendTitle, 5000);
 
   // Bildirimler: WebView2 web bildirimlerini göstermez; WhatsApp'ın çağrılarını yakalayıp Rust'a iletiyoruz.
   const store = new Map();
-  let seq = 0;
+  // Sayfa yenilenince eski bildirime tıklanırsa yanlış sohbet açılmasın: kimlikler her yüklemede farklı başlar.
+  let seq = Math.floor(Math.random() * 1e6) * 1000;
   class WrsNotification extends EventTarget {
     constructor(title, opts = {}) {
       super();

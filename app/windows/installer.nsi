@@ -926,6 +926,9 @@ Section Uninstall
   ; We do this when not updating (to preserve the registry value on updates)
   ${If} $UpdateMode <> 1
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCTNAME}"
+    ; WHATSAPPRS: Görev Yöneticisi başlangıç kaydı ve (eski sürümler/yönetici çalıştırması için) HKLM değeri
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" "${PRODUCTNAME}"
+    DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCTNAME}"
   ${EndIf}
 
   ; Delete app data if the checkbox is selected
@@ -933,8 +936,10 @@ Section Uninstall
   ; WHATSAPPRS: sessiz/pasif/güncelleme kaldırmalarında seçim boştur → veri saklanır
   ${If} $KeepDataChoice == "delete"
   ${AndIf} $UpdateMode <> 1
-    ; Yalnızca kendi data\ klasörümüzü siler; kullanıcı başka bir klasöre kurduysa diğer dosyalara dokunulmaz
-    RMDir /r "$INSTDIR\data"
+    ; Yalnızca kendi data\ klasörümüzü (.whatsapprs işaretli) siler; aynı adlı başka klasörlere dokunulmaz
+    ${If} ${FileExists} "$INSTDIR\data\.whatsapprs"
+      RMDir /r "$INSTDIR\data"
+    ${EndIf}
     RMDir "$INSTDIR"
     ; Clear the install location $INSTDIR from registry
     DeleteRegKey SHCTX "${MANUPRODUCTKEY}"

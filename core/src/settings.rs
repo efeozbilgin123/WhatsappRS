@@ -32,7 +32,7 @@ pub fn load(path: &Path) -> (Settings, Option<String>) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return (Settings::default(), None),
         Err(e) => return (Settings::default(), Some(format!("Ayar dosyası okunamadı: {e}"))),
     };
-    match serde_json::from_str(&text) {
+    match serde_json::from_str(text.trim_start_matches('\u{feff}')) {
         Ok(s) => (s, None),
         Err(e) => {
             let bak = path.with_extension("json.bak");
@@ -51,6 +51,19 @@ pub fn save(path: &Path, s: &Settings) -> std::io::Result<()> {
     let json = serde_json::to_string_pretty(s).map_err(std::io::Error::other)?;
     std::fs::write(&tmp, json)?;
     std::fs::rename(&tmp, path)
+}
+
+/// Yalnızca pencere konumunu günceller; dosyadaki diğer alanlar (kullanıcının elle yaptığı
+/// değişiklikler dahil) korunur. Dosya bozuksa dokunulmaz ve hata döner.
+pub fn update_window(path: &Path, window: Option<WindowGeom>) -> std::io::Result<()> {
+    let mut current = match std::fs::read_to_string(path) {
+        Ok(text) => serde_json::from_str::<Settings>(text.trim_start_matches('\u{feff}'))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Settings::default(),
+        Err(e) => return Err(e),
+    };
+    current.window = window;
+    save(path, &current)
 }
 
 const MIN_VISIBLE: i64 = 100;
@@ -115,6 +128,29 @@ mod tests {
         assert!(w.is_some());
         assert_eq!(std::fs::read_to_string(d.join("settings.json.bak")).unwrap(), "{bozuk");
         assert!(!p.exists());
+    }
+    #[test] fn update_window_keeps_hand_edits() {
+        let p = tmp().join("settings.json");
+        save(&p, &Settings::default()).unwrap();
+        // kullanıcı uygulama açıkken dosyayı elle düzenledi
+        std::fs::write(&p, r#"{"shortcut":"Alt+Q"}"#).unwrap();
+        update_window(&p, Some(g(10, 20))).unwrap();
+        let (s, _) = load(&p);
+        assert_eq!(s.shortcut, "Alt+Q");
+        assert_eq!(s.window, Some(g(10, 20)));
+    }
+    #[test] fn update_window_leaves_corrupt_file_alone() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, "{bozuk").unwrap();
+        assert!(update_window(&p, Some(g(1, 2))).is_err());
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "{bozuk");
+    }
+    #[test] fn bom_is_accepted() {
+        let p = tmp().join("settings.json");
+        std::fs::write(&p, "\u{feff}{\"shortcut\":\"Alt+Q\"}").unwrap();
+        let (s, w) = load(&p);
+        assert_eq!(s.shortcut, "Alt+Q");
+        assert!(w.is_none());
     }
     #[test] fn geom_visible() { assert!(geom_is_visible(&g(100, 100), &[MON])); }
     #[test] fn geom_offscreen_ignored() {

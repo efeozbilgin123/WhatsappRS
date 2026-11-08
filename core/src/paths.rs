@@ -3,6 +3,9 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+/// `data\` klasörünün bize ait olduğunu gösteren dosya; kaldırıcı yalnızca bu varsa siler.
+pub const MARKER: &str = ".whatsapprs";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataPaths {
     pub root: PathBuf,
@@ -50,6 +53,10 @@ impl DataPaths {
         let probe = self.root.join(".write-test");
         std::fs::write(&probe, b"ok").map_err(fail(&self.root))?;
         std::fs::remove_file(&probe).map_err(fail(&self.root))?;
+        let marker = self.root.join(MARKER);
+        if !marker.is_file() {
+            std::fs::write(&marker, b"WhatsappRS veri klasoru\r\n").map_err(fail(&self.root))?;
+        }
         Ok(())
     }
 }
@@ -85,6 +92,7 @@ mod tests {
         p.prepare().unwrap();
         assert!(p.root.is_dir() && p.logs.is_dir() && p.webview.is_dir());
         assert!(!p.root.join(".write-test").exists());
+        assert!(p.root.join(MARKER).is_file(), "kaldırıcı yalnızca işaretli data klasörünü siler");
     }
     #[test] fn prepare_fails_when_unwritable() {
         let d = tmp();
