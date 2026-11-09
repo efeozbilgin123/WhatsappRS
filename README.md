@@ -87,6 +87,7 @@ cd app && cargo tauri build     # Windows'ta: kurulum programı
 - `app/`: Tauri uygulaması. `app/inject/bridge.js` WhatsApp Web sayfasına enjekte edilir.
 - `app/windows/installer.nsi`: özelleştirilmiş NSIS şablonu.
 - Tasarım: `docs/superpowers/specs/`, test listesi: `docs/TEST.md`.
+- **Projeyi devralan geliştiriciler/yapay zekâ ajanları için:** `docs/HANDOFF.md` (durum, açık sorunlar, kararlar, yayın süreci).
 
 ## Not
 
