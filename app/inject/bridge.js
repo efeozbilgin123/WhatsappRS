@@ -92,7 +92,7 @@
 
   // Teşhis: 50 ms'den uzun süren işleri (takılan kareler) 10 saniyelik özetler hâlinde log'a gönderir.
   // "source", takılmada en çok süre harcayan betiğin adı (WhatsApp'ın kendi kodu mu, başka bir şey mi).
-  const perf = { count: 0, total: 0, max: 0, sources: new Map(), scrolledAt: 0 };
+  const perf = { count: 0, total: 0, max: 0, sources: new Map(), scrolledAt: 0, script: 0, render: 0, forced: 0, measured: 0 };
   document.addEventListener("scroll", () => { perf.scrolledAt = Date.now(); }, { capture: true, passive: true });
   document.addEventListener("wheel", () => { perf.scrolledAt = Date.now(); }, { capture: true, passive: true });
   const record = (duration, source) => {
@@ -110,7 +110,11 @@
     if (types.includes("long-animation-frame")) {
       new PerformanceObserver((list) => {
         for (const e of list.getEntries()) {
-          const top = (e.scripts || []).slice().sort((a, b) => b.duration - a.duration)[0];
+          const scripts = e.scripts || [];
+          perf.script += scripts.reduce((sum, script) => sum + (script.duration || 0), 0);
+          perf.forced += scripts.reduce((sum, script) => sum + (script.forcedStyleAndLayoutDuration || 0), 0);
+          if (e.renderStart > 0) { perf.render += Math.max(0, e.startTime + e.duration - e.renderStart); perf.measured++; }
+          const top = scripts.slice().sort((a, b) => b.duration - a.duration)[0];
           record(e.duration, top ? shortSource(top.sourceURL) + " " + (top.invoker || "").slice(0, 40) : "çizim/stil");
         }
       }).observe({ type: "long-animation-frame", buffered: false });
@@ -127,9 +131,9 @@
       total_ms: Math.round(perf.total),
       max_ms: Math.round(perf.max),
       scrolling: Date.now() - perf.scrolledAt < 10000,
-      source: top ? top[0] : "",
+      source: `JS=${Math.round(perf.script)}ms render=${Math.round(perf.render)}ms forced=${Math.round(perf.forced)}ms olcum=${perf.measured}/${perf.count} ` + (top ? top[0] : ""),
     });
-    perf.count = 0; perf.total = 0; perf.max = 0; perf.sources.clear();
+    perf.count = 0; perf.total = 0; perf.max = 0; perf.script = 0; perf.render = 0; perf.forced = 0; perf.measured = 0; perf.sources.clear();
   }, 10000);
 
   window.__wrs = {
