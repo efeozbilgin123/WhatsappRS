@@ -95,7 +95,7 @@ jobs:
           $json | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8NoBOM dist/latest.json
           Get-Content dist/latest.json
       - name: Sürüm yayını denetimi
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release)
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Sürüm 0.2.9 yayımla'))
         shell: pwsh
         run: |
           if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw "Sürüm yayınlamak için TAURI_SIGNING_PRIVATE_KEY gizli anahtarı gerekli" }
@@ -109,7 +109,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release)
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Sürüm 0.2.9 yayımla'))
     needs: [test, windows]
     runs-on: ubuntu-latest
     permissions:
