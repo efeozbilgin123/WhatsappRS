@@ -1,0 +1,36 @@
+name: Firefox denemesi
+on:
+  push:
+    branches: [firefox-deneme]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Deneme uygulamasını derle
+        shell: pwsh
+        run: |
+          dotnet publish spike/firefox/FirefoxDeneme.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/WhatsappRS-Firefox-Deneme
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Resmi Firefox motorunu al
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=tr' -OutFile firefox-installer.exe
+          if ((Get-Item firefox-installer.exe).Length -lt 30MB) { throw 'Firefox indirimi eksik' }
+          7z x firefox-installer.exe -oextracted -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Firefox paketi açılamadı' }
+          if (-not (Test-Path extracted/core/firefox.exe)) { throw 'Firefox motoru arşivde bulunamadı' }
+          Move-Item extracted/core dist/WhatsappRS-Firefox-Deneme/firefox
+          Copy-Item spike/firefox/README.md dist/WhatsappRS-Firefox-Deneme/README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WhatsappRS-Firefox-Deneme
+          path: dist/WhatsappRS-Firefox-Deneme/
+          if-no-files-found: error
+
